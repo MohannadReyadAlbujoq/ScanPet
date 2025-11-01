@@ -1,0 +1,467 @@
+{
+	"info": {
+		"_postman_id": "scanpet-api-collection",
+		"name": "ScanPet Mobile Backend API",
+		"description": "Complete API collection for ScanPet Backend with .NET 8\nBase URL: http://localhost:5000\n\nUsers:\n- admin / Admin@123 (Full Access)\n- manager / Manager@123 (Operational)\n- user / User@123 (View Only)",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"auth": {
+		"type": "bearer",
+		"bearer": [
+			{
+				"key": "token",
+				"value": "{{accessToken}}",
+				"type": "string"
+			}
+		]
+	},
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "http://localhost:5000",
+			"type": "string"
+		},
+		{
+			"key": "accessToken",
+			"value": "",
+			"type": "string"
+		}
+	],
+	"item": [
+		{
+			"name": "Authentication",
+			"item": [
+				{
+					"name": "Login - Admin",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    var jsonData = pm.response.json();",
+									"    pm.collectionVariables.set('accessToken', jsonData.data.accessToken);",
+									"}"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"username\": \"admin\",\n  \"password\": \"Admin@123\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/login",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "auth", "login"]
+						}
+					}
+				},
+				{
+					"name": "Login - Manager",
+					"request": {
+						"method": "POST",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"username\": \"manager\",\n  \"password\": \"Manager@123\"\n}"
+						},
+						"url": "{{baseUrl}}/api/auth/login"
+					}
+				},
+				{
+					"name": "Login - User",
+					"request": {
+						"method": "POST",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"username\": \"user\",\n  \"password\": \"User@123\"\n}"
+						},
+						"url": "{{baseUrl}}/api/auth/login"
+					}
+				},
+				{
+					"name": "Register New User",
+					"request": {
+						"method": "POST",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"username\": \"newuser\",\n  \"email\": \"newuser@example.com\",\n  \"password\": \"NewUser@123\",\n  \"fullName\": \"New User\",\n  \"phoneNumber\": \"+1234567893\"\n}"
+						},
+						"url": "{{baseUrl}}/api/auth/register"
+					}
+				},
+				{
+					"name": "Refresh Token",
+					"request": {
+						"method": "POST",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"refreshToken\": \"your_refresh_token_here\"\n}"
+						},
+						"url": "{{baseUrl}}/api/auth/refresh"
+					}
+				}
+			]
+		},
+		{
+			"name": "Users",
+			"item": [
+				{
+					"name": "Get All Users",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{baseUrl}}/api/users?pageNumber=1&pageSize=10",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "users"],
+							"query": [
+								{"key": "pageNumber", "value": "1"},
+								{"key": "pageSize", "value": "10"}
+							]
+						}
+					}
+				},
+				{
+					"name": "Get User By ID",
+					"request": {
+						"method": "GET",
+						"url": "{{baseUrl}}/api/users/{{userId}}"
+					}
+				},
+				{
+					"name": "Create User",
+					"request": {
+						"method": "POST",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"username\": \"testuser\",\n  \"email\": \"test@example.com\",\n  \"password\": \"Test@123\",\n  \"fullName\": \"Test User\",\n  \"phoneNumber\": \"+1234567894\"\n}"
+						},
+						"url": "{{baseUrl}}/api/users"
+					}
+				},
+				{
+					"name": "Update User",
+					"request": {
+						"method": "PUT",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"updated@example.com\",\n  \"fullName\": \"Updated Name\",\n  \"phoneNumber\": \"+1234567895\"\n}"
+						},
+						"url": "{{baseUrl}}/api/users/{{userId}}"
+					}
+				},
+				{
+					"name": "Approve User",
+					"request": {
+						"method": "PUT",
+						"url": "{{baseUrl}}/api/users/{{userId}}/approve"
+					}
+				}
+			]
+		},
+		{
+			"name": "Roles",
+			"item": [
+				{
+					"name": "Get All Roles",
+					"request": {
+						"method": "GET",
+						"url": "{{baseUrl}}/api/roles"
+					}
+				},
+				{
+					"name": "Get Role By ID",
+					"request": {
+						"method": "GET",
+						"url": "{{baseUrl}}/api/roles/{{roleId}}"
+					}
+				},
+				{
+					"name": "Create Role",
+					"request": {
+						"method": "POST",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Supervisor\",\n  \"description\": \"Supervisor with elevated access\"\n}"
+						},
+						"url": "{{baseUrl}}/api/roles"
+					}
+				},
+				{
+					"name": "Update Role",
+					"request": {
+						"method": "PUT",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Updated Role\",\n  \"description\": \"Updated description\"\n}"
+						},
+						"url": "{{baseUrl}}/api/roles/{{roleId}}"
+					}
+				},
+				{
+					"name": "Delete Role",
+					"request": {
+						"method": "DELETE",
+						"url": "{{baseUrl}}/api/roles/{{roleId}}"
+					}
+				},
+				{
+					"name": "Assign Permissions to Role",
+					"request": {
+						"method": "PUT",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"permissionIds\": [\n    \"permission-id-1\",\n    \"permission-id-2\"\n  ]\n}"
+						},
+						"url": "{{baseUrl}}/api/roles/{{roleId}}/permissions"
+					}
+				}
+			]
+		},
+		{
+			"name": "Items",
+			"item": [
+				{
+					"name": "Get All Items",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{baseUrl}}/api/items?pageNumber=1&pageSize=10",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "items"],
+							"query": [
+								{"key": "pageNumber", "value": "1"},
+								{"key": "pageSize", "value": "10"}
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Item By ID",
+					"request": {
+						"method": "GET",
+						"url": "{{baseUrl}}/api/items/{{itemId}}"
+					}
+				},
+				{
+					"name": "Create Item",
+					"request": {
+						"method": "POST",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Pet Food - Premium\",\n  \"sku\": \"PF-100\",\n  \"description\": \"High-quality pet food\",\n  \"basePrice\": 29.99,\n  \"quantity\": 100,\n  \"colorId\": \"color-guid-here\"\n}"
+						},
+						"url": "{{baseUrl}}/api/items"
+					}
+				},
+				{
+					"name": "Update Item",
+					"request": {
+						"method": "PUT",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Pet Food - Super Premium\",\n  \"description\": \"Updated description\",\n  \"basePrice\": 34.99,\n  \"quantity\": 150\n}"
+						},
+						"url": "{{baseUrl}}/api/items/{{itemId}}"
+					}
+				},
+				{
+					"name": "Delete Item",
+					"request": {
+						"method": "DELETE",
+						"url": "{{baseUrl}}/api/items/{{itemId}}"
+					}
+				}
+			]
+		},
+		{
+			"name": "Orders",
+			"item": [
+				{
+					"name": "Get All Orders",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{baseUrl}}/api/orders?pageNumber=1&pageSize=10",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "orders"],
+							"query": [
+								{"key": "pageNumber", "value": "1"},
+								{"key": "pageSize", "value": "10"}
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Order By ID",
+					"request": {
+						"method": "GET",
+						"url": "{{baseUrl}}/api/orders/{{orderId}}"
+					}
+				},
+				{
+					"name": "Create Order",
+					"request": {
+						"method": "POST",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"customerName\": \"John Doe\",\n  \"customerEmail\": \"john@example.com\",\n  \"items\": [\n    {\n      \"itemId\": \"item-guid-here\",\n      \"quantity\": 2,\n      \"price\": 29.99\n    }\n  ]\n}"
+						},
+						"url": "{{baseUrl}}/api/orders"
+					}
+				},
+				{
+					"name": "Update Order",
+					"request": {
+						"method": "PUT",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"status\": \"Processing\"\n}"
+						},
+						"url": "{{baseUrl}}/api/orders/{{orderId}}"
+					}
+				},
+				{
+					"name": "Delete Order",
+					"request": {
+						"method": "DELETE",
+						"url": "{{baseUrl}}/api/orders/{{orderId}}"
+					}
+				}
+			]
+		},
+		{
+			"name": "Colors",
+			"item": [
+				{
+					"name": "Get All Colors",
+					"request": {
+						"method": "GET",
+						"url": "{{baseUrl}}/api/colors"
+					}
+				},
+				{
+					"name": "Get Color By ID",
+					"request": {
+						"method": "GET",
+						"url": "{{baseUrl}}/api/colors/{{colorId}}"
+					}
+				},
+				{
+					"name": "Create Color",
+					"request": {
+						"method": "POST",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Sky Blue\",\n  \"redValue\": 135,\n  \"greenValue\": 206,\n  \"blueValue\": 235,\n  \"description\": \"Light sky blue color\"\n}"
+						},
+						"url": "{{baseUrl}}/api/colors"
+					}
+				},
+				{
+					"name": "Update Color",
+					"request": {
+						"method": "PUT",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Deep Sky Blue\",\n  \"description\": \"Updated description\"\n}"
+						},
+						"url": "{{baseUrl}}/api/colors/{{colorId}}"
+					}
+				},
+				{
+					"name": "Delete Color",
+					"request": {
+						"method": "DELETE",
+						"url": "{{baseUrl}}/api/colors/{{colorId}}"
+					}
+				}
+			]
+		},
+		{
+			"name": "Locations",
+			"item": [
+				{
+					"name": "Get All Locations",
+					"request": {
+						"method": "GET",
+						"url": "{{baseUrl}}/api/locations"
+					}
+				},
+				{
+					"name": "Get Location By ID",
+					"request": {
+						"method": "GET",
+						"url": "{{baseUrl}}/api/locations/{{locationId}}"
+					}
+				},
+				{
+					"name": "Create Location",
+					"request": {
+						"method": "POST",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"New Warehouse\",\n  \"address\": \"456 Storage Ave\",\n  \"city\": \"Boston\",\n  \"country\": \"United States\",\n  \"postalCode\": \"02101\",\n  \"isActive\": true\n}"
+						},
+						"url": "{{baseUrl}}/api/locations"
+					}
+				},
+				{
+					"name": "Update Location",
+					"request": {
+						"method": "PUT",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Updated Warehouse\",\n  \"isActive\": false\n}"
+						},
+						"url": "{{baseUrl}}/api/locations/{{locationId}}"
+					}
+				},
+				{
+					"name": "Delete Location",
+					"request": {
+						"method": "DELETE",
+						"url": "{{baseUrl}}/api/locations/{{locationId}}"
+					}
+				}
+			]
+		},
+		{
+			"name": "Health",
+			"item": [
+				{
+					"name": "Health Check",
+					"request": {
+						"method": "GET",
+						"url": "{{baseUrl}}/health"
+					}
+				}
+			]
+		}
+	]
+}

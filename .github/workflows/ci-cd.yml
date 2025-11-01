@@ -1,0 +1,192 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+env:
+  DOTNET_VERSION: '8.0.x'
+  SOLUTION_PATH: 'MobileBackend.sln'
+
+jobs:
+  # Job 1: Build and Test
+  build-and-test:
+    name: Build & Test
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: ?? Checkout code
+      uses: actions/checkout@v4
+      
+    - name: ?? Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+        
+    - name: ?? Restore dependencies
+      run: dotnet restore ${{ env.SOLUTION_PATH }}
+      
+    - name: ??? Build solution
+      run: dotnet build ${{ env.SOLUTION_PATH }} --configuration Release --no-restore
+      
+    - name: ?? Run unit tests
+      run: dotnet test tests/MobileBackend.UnitTests/MobileBackend.UnitTests.csproj --configuration Release --no-build --verbosity normal --logger "trx;LogFileName=test-results.trx"
+      continue-on-error: true
+      
+    - name: ?? Publish test results
+      uses: dorny/test-reporter@v1
+      if: always()
+      with:
+        name: Test Results
+        path: '**/test-results.trx'
+        reporter: dotnet-trx
+        fail-on-error: false
+        
+    - name: ?? Code coverage
+      run: dotnet test tests/MobileBackend.UnitTests/MobileBackend.UnitTests.csproj --configuration Release --no-build --collect:"XPlat Code Coverage" --results-directory ./coverage
+      continue-on-error: true
+      
+    - name: ?? Upload coverage to Codecov
+      uses: codecov/codecov-action@v3
+      if: always()
+      with:
+        directory: ./coverage
+        fail_ci_if_error: false
+
+  # Job 2: Security Scan
+  security-scan:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    needs: build-and-test
+    
+    steps:
+    - name: ?? Checkout code
+      uses: actions/checkout@v4
+      
+    - name: ?? Run security scan
+      uses: securego/gosec@master
+      continue-on-error: true
+      
+    - name: ?? Dependency check
+      run: |
+        dotnet list package --vulnerable --include-transitive
+      continue-on-error: true
+
+  # Job 3: Build Docker Image
+  build-docker:
+    name: Build Docker Image
+    runs-on: ubuntu-latest
+    needs: [build-and-test, security-scan]
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop')
+    
+    steps:
+    - name: ?? Checkout code
+      uses: actions/checkout@v4
+      
+    - name: ?? Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+      
+    - name: ?? Login to Docker Hub
+      uses: docker/login-action@v3
+      with:
+        username: ${{ secrets.DOCKER_HUB_USERNAME }}
+        password: ${{ secrets.DOCKER_HUB_TOKEN }}
+      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+      
+    - name: ??? Extract metadata
+      id: meta
+      uses: docker/metadata-action@v5
+      with:
+        images: ${{ secrets.DOCKER_HUB_USERNAME }}/scanpet-api
+        tags: |
+          type=ref,event=branch
+          type=semver,pattern={{version}}
+          type=semver,pattern={{major}}.{{minor}}
+          type=sha,prefix={{branch}}-
+          
+    - name: ??? Build and push Docker image
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        file: ./Dockerfile
+        push: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+        tags: ${{ steps.meta.outputs.tags }}
+        labels: ${{ steps.meta.outputs.labels }}
+        cache-from: type=registry,ref=${{ secrets.DOCKER_HUB_USERNAME }}/scanpet-api:buildcache
+        cache-to: type=registry,ref=${{ secrets.DOCKER_HUB_USERNAME }}/scanpet-api:buildcache,mode=max
+
+  # Job 4: Deploy to Staging
+  deploy-staging:
+    name: Deploy to Staging
+    runs-on: ubuntu-latest
+    needs: build-docker
+    if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
+    environment:
+      name: staging
+      url: https://staging-api.scanpet.com
+    
+    steps:
+    - name: ?? Checkout code
+      uses: actions/checkout@v4
+      
+    - name: ?? Deploy to staging
+      run: |
+        echo "Deploying to staging environment..."
+        # Add your deployment commands here
+        # Example: kubectl apply -f k8s/staging/
+        # Or: docker-compose -f docker-compose.staging.yml up -d
+        
+    - name: ?? Run smoke tests
+      run: |
+        echo "Running smoke tests..."
+        # curl https://staging-api.scanpet.com/health
+
+  # Job 5: Deploy to Production
+  deploy-production:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    needs: build-docker
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    environment:
+      name: production
+      url: https://api.scanpet.com
+    
+    steps:
+    - name: ?? Checkout code
+      uses: actions/checkout@v4
+      
+    - name: ?? Deploy to production
+      run: |
+        echo "Deploying to production environment..."
+        # Add your deployment commands here
+        # Example: kubectl apply -f k8s/production/
+        
+    - name: ?? Run smoke tests
+      run: |
+        echo "Running production smoke tests..."
+        # curl https://api.scanpet.com/health
+        
+    - name: ?? Notify deployment
+      if: always()
+      run: |
+        echo "Notifying team of deployment status..."
+        # Add notification logic (Slack, Teams, email, etc.)
+
+  # Job 6: Performance Test
+  performance-test:
+    name: Performance Test
+    runs-on: ubuntu-latest
+    needs: deploy-staging
+    if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
+    
+    steps:
+    - name: ?? Checkout code
+      uses: actions/checkout@v4
+      
+    - name: ?? Run load tests
+      run: |
+        echo "Running performance tests..."
+        # Example: k6 run performance-tests/load-test.js
+      continue-on-error: true
