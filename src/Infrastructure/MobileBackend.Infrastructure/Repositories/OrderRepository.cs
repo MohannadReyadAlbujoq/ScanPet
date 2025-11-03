@@ -17,6 +17,7 @@ public class OrderRepository : GenericRepository<Order>, IOrderRepository
         return await _dbSet
             .Include(o => o.OrderItems)
                 .ThenInclude(oi => oi.Item)
+            .Include(o => o.Location)  // Include location too
             .FirstOrDefaultAsync(o => o.Id == orderId, cancellationToken);
     }
 
@@ -74,6 +75,61 @@ public class OrderRepository : GenericRepository<Order>, IOrderRepository
         return await _dbSet
             .OrderByDescending(o => o.CreatedAt)
             .Take(count)
+            .ToListAsync(cancellationToken);
+    }
+
+    public async Task<Order?> GetByOrderNumberAsync(string orderNumber, CancellationToken cancellationToken = default)
+    {
+        return await _dbSet
+            .FirstOrDefaultAsync(o => o.OrderNumber == orderNumber, cancellationToken);
+    }
+
+    public async Task<IEnumerable<Order>> GetOrdersByClientAsync(string clientName, CancellationToken cancellationToken = default)
+    {
+        return await _dbSet
+            .Where(o => o.ClientName.Contains(clientName))
+            .OrderByDescending(o => o.CreatedAt)
+            .ToListAsync(cancellationToken);
+    }
+
+    public async Task<IEnumerable<Order>> GetOrdersByStatusAsync(int status, CancellationToken cancellationToken = default)
+    {
+        return await _dbSet
+            .Where(o => (int)o.OrderStatus == status)
+            .OrderByDescending(o => o.CreatedAt)
+            .ToListAsync(cancellationToken);
+    }
+
+    public async Task<IEnumerable<Order>> GetOrdersByLocationAsync(Guid locationId, CancellationToken cancellationToken = default)
+    {
+        return await _dbSet
+            .Where(o => o.LocationId == locationId)
+            .OrderByDescending(o => o.CreatedAt)
+            .ToListAsync(cancellationToken);
+    }
+
+    public async Task<IEnumerable<Order>> GetOrdersByDateRangeAsync(DateTime startDate, DateTime endDate, CancellationToken cancellationToken = default)
+    {
+        return await _dbSet
+            .Where(o => o.CreatedAt >= startDate && o.CreatedAt <= endDate)
+            .OrderByDescending(o => o.CreatedAt)
+            .ToListAsync(cancellationToken);
+    }
+
+    public async Task<decimal> GetTotalRevenueAsync(CancellationToken cancellationToken = default)
+    {
+        return await _dbSet
+            .Where(o => !o.IsDeleted)
+            .SumAsync(o => o.TotalAmount, cancellationToken);
+    }
+
+    // Get all orders with locations included (fix N+1)
+    public async Task<IEnumerable<Order>> GetAllWithLocationsAsync(CancellationToken cancellationToken = default)
+    {
+        return await _dbSet
+            .Include(o => o.Location)  // ? Eager load locations
+            .Where(o => !o.IsDeleted)
+            .OrderByDescending(o => o.CreatedAt)
             .ToListAsync(cancellationToken);
     }
 }

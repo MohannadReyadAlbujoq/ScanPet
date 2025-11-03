@@ -15,6 +15,7 @@ public class CreateColorCommandHandlerTests : TestBase
     private readonly Mock<IColorRepository> _mockColorRepository;
     private readonly Mock<IAuditService> _mockAuditService;
     private readonly Mock<ICurrentUserService> _mockCurrentUserService;
+    private readonly Mock<IDateTimeService> _mockDateTimeService;
     private readonly Mock<ILogger<CreateColorCommandHandler>> _mockLogger;
     private readonly CreateColorCommandHandler _handler;
 
@@ -24,16 +25,18 @@ public class CreateColorCommandHandlerTests : TestBase
         _mockColorRepository = CreateMock<IColorRepository>();
         _mockAuditService = CreateMock<IAuditService>();
         _mockCurrentUserService = CreateMock<ICurrentUserService>();
+        _mockDateTimeService = CreateMock<IDateTimeService>();
         _mockLogger = CreateMock<ILogger<CreateColorCommandHandler>>();
         
         _mockUnitOfWork.Setup(x => x.Colors).Returns(_mockColorRepository.Object);
         _mockCurrentUserService.Setup(x => x.UserId).Returns(Guid.NewGuid());
+        _mockDateTimeService.Setup(x => x.UtcNow).Returns(DateTime.UtcNow);
         
         _handler = new CreateColorCommandHandler(
-            _mockColorRepository.Object,
             _mockUnitOfWork.Object,
             _mockAuditService.Object,
             _mockCurrentUserService.Object,
+            _mockDateTimeService.Object,
             _mockLogger.Object);
     }
 

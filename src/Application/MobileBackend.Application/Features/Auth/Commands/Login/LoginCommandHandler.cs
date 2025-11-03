@@ -73,9 +73,8 @@ public class LoginCommandHandler : IRequestHandler<LoginCommand, Result<LoginRes
                 return Result<LoginResponseDto>.FailureResult("Invalid username or password", 401);
             }
 
-            // 5. Get user roles and permissions
-            var roles = await _unitOfWork.Roles.GetRolesByUserIdAsync(user.Id, cancellationToken);
-            var permissionsBitmask = await _unitOfWork.Permissions.GetUserPermissionBitmaskAsync(user.Id, cancellationToken);
+            // ? FIX N+1: Get user roles and permissions in single query
+            var (roles, permissionsBitmask) = await _unitOfWork.Users.GetUserRolesAndPermissionsAsync(user.Id, cancellationToken);
 
             // 6. Generate JWT tokens
             var accessToken = _jwtService.GenerateAccessToken(

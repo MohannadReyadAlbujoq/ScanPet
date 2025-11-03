@@ -45,16 +45,29 @@ public class CancelOrderCommandHandler : IRequestHandler<CancelOrderCommand, Res
                 return Result<bool>.FailureResult("Order is already cancelled", 400);
             }
 
-            // Restore item quantities
-            if (order.OrderItems != null)
+            // ? FIX N+1: Fetch all items in single query before loop
+            if (order.OrderItems != null && order.OrderItems.Any())
             {
+                var itemIds = order.OrderItems.Select(oi => oi.ItemId).Distinct().ToList();
+                var items = await _unitOfWork.Items.FindAsync(
+                    i => itemIds.Contains(i.Id), 
+                    cancellationToken);
+                
+                var itemsDict = items.ToDictionary(i => i.Id);
+
+                // Restore item quantities
                 foreach (var orderItem in order.OrderItems)
                 {
-                    var item = await _unitOfWork.Items.GetByIdAsync(orderItem.ItemId);
-                    if (item != null)
+                    // ? Now using dictionary lookup instead of database query
+                    if (itemsDict.TryGetValue(orderItem.ItemId, out var item))
                     {
                         item.Quantity += orderItem.Quantity;
                         _unitOfWork.Items.Update(item);
+                    }
+                    else
+                    {
+                        _logger.LogWarning("Item {ItemId} not found when cancelling order {OrderId}", 
+                            orderItem.ItemId, order.Id);
                     }
                 }
             }

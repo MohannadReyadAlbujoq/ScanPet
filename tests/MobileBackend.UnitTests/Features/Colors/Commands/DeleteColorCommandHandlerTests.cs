@@ -18,6 +18,7 @@ public class DeleteColorCommandHandlerTests : TestBase
     private readonly Mock<IColorRepository> _mockColorRepository;
     private readonly Mock<IAuditService> _mockAuditService;
     private readonly Mock<ICurrentUserService> _mockCurrentUserService;
+    private readonly Mock<IDateTimeService> _mockDateTimeService;
     private readonly Mock<ILogger<DeleteColorCommandHandler>> _mockLogger;
     private readonly DeleteColorCommandHandler _handler;
 
@@ -27,16 +28,19 @@ public class DeleteColorCommandHandlerTests : TestBase
         _mockColorRepository = CreateMock<IColorRepository>();
         _mockAuditService = CreateMock<IAuditService>();
         _mockCurrentUserService = CreateMock<ICurrentUserService>();
+        _mockDateTimeService = CreateMock<IDateTimeService>();
         _mockLogger = CreateMock<ILogger<DeleteColorCommandHandler>>();
         
         _mockUnitOfWork.Setup(x => x.Colors).Returns(_mockColorRepository.Object);
         _mockCurrentUserService.Setup(x => x.UserId).Returns(Guid.NewGuid());
+        _mockDateTimeService.Setup(x => x.UtcNow).Returns(DateTime.UtcNow);
         
-        // Fix: Constructor now uses IUnitOfWork, IAuditService, ICurrentUserService, ILogger
+        // Updated constructor with IDateTimeService
         _handler = new DeleteColorCommandHandler(
             _mockUnitOfWork.Object,
             _mockAuditService.Object,
             _mockCurrentUserService.Object,
+            _mockDateTimeService.Object,
             _mockLogger.Object);
     }
 
@@ -46,7 +50,7 @@ public class DeleteColorCommandHandlerTests : TestBase
         // Arrange
         var colorId = Guid.NewGuid();
         var userId = Guid.NewGuid();
-        var command = new DeleteColorCommand { ColorId = colorId }; // Fix: Changed from Id to ColorId
+        var command = new DeleteColorCommand { ColorId = colorId };
 
         var existingColor = new Color
         {
@@ -83,7 +87,7 @@ public class DeleteColorCommandHandlerTests : TestBase
     {
         // Arrange
         var colorId = Guid.NewGuid();
-        var command = new DeleteColorCommand { ColorId = colorId }; // Fix: Changed from Id to ColorId
+        var command = new DeleteColorCommand { ColorId = colorId };
 
         _mockColorRepository
             .Setup(x => x.GetByIdAsync(colorId, It.IsAny<CancellationToken>()))
@@ -126,7 +130,6 @@ public class DeleteColorCommandHandlerTests : TestBase
         var result = await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        // Note: Handler allows re-deleting (idempotent operation)
         result.Success.Should().BeTrue();
         deletedColor.IsDeleted.Should().BeTrue();
     }
@@ -136,7 +139,7 @@ public class DeleteColorCommandHandlerTests : TestBase
     {
         // Arrange
         var colorId = Guid.NewGuid();
-        var command = new DeleteColorCommand { ColorId = colorId }; // Fix: Changed from Id to ColorId
+        var command = new DeleteColorCommand { ColorId = colorId };
 
         var existingColor = new Color
         {
@@ -194,7 +197,7 @@ public class DeleteColorCommandHandlerTests : TestBase
 
         // Assert
         result1.Success.Should().BeTrue();
-        result2.Success.Should().BeTrue(); // Handler allows re-deleting
+        result2.Success.Should().BeTrue();
         existingColor.IsDeleted.Should().BeTrue();
     }
 }

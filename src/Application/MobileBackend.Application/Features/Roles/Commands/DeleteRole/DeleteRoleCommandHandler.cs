@@ -1,69 +1,63 @@
-using MediatR;
+using Microsoft.Extensions.Logging;
 using MobileBackend.Application.Common.Constants;
+using MobileBackend.Application.Common.Handlers;
 using MobileBackend.Application.Common.Interfaces;
 using MobileBackend.Application.DTOs.Common;
 using MobileBackend.Application.Interfaces;
+using MobileBackend.Domain.Entities;
 
 namespace MobileBackend.Application.Features.Roles.Commands.DeleteRole;
 
 /// <summary>
-/// Handler for DeleteRoleCommand
-/// Performs soft delete
+/// Handler for deleting (soft delete) a role
+/// Uses BaseSoftDeleteHandler with validation override
 /// </summary>
-public class DeleteRoleCommandHandler : IRequestHandler<DeleteRoleCommand, Result<bool>>
+public class DeleteRoleCommandHandler : BaseSoftDeleteHandler<DeleteRoleCommand, Role>
 {
-    private readonly IUnitOfWork _unitOfWork;
-    private readonly IAuditService _auditService;
-    private readonly ICurrentUserService _currentUserService;
-
     public DeleteRoleCommandHandler(
         IUnitOfWork unitOfWork,
         IAuditService auditService,
-        ICurrentUserService currentUserService)
+        ICurrentUserService currentUserService,
+        IDateTimeService dateTimeService,
+        ILogger<DeleteRoleCommandHandler> logger)
+        : base(unitOfWork, auditService, currentUserService, dateTimeService, logger)
     {
-        _unitOfWork = unitOfWork;
-        _auditService = auditService;
-        _currentUserService = currentUserService;
     }
 
-    public async Task<Result<bool>> Handle(DeleteRoleCommand request, CancellationToken cancellationToken)
-    {
-        var role = await _unitOfWork.Roles.GetByIdAsync(request.RoleId, cancellationToken);
-        if (role == null)
-        {
-            return Result<bool>.FailureResult("Role not found", 404);
-        }
+    protected override Guid GetEntityId(DeleteRoleCommand command) 
+        => command.RoleId;
 
-        // Check if role is assigned to any users
-        var usersWithRole = await _unitOfWork.Roles.GetUserCountAsync(request.RoleId, cancellationToken);
+    protected override async Task<Role?> GetEntityAsync(Guid id, CancellationToken cancellationToken)
+        => await UnitOfWork.Roles.GetByIdAsync(id, cancellationToken);
+
+    protected override void UpdateEntity(Role entity)
+    {
+        // Use the repository's soft delete method
+        entity.IsDeleted = true;
+        entity.DeletedAt = DateTimeService.UtcNow;
+        entity.DeletedBy = CurrentUserService.UserId;
+        UnitOfWork.Roles.Update(entity);
+    }
+
+    protected override string GetEntityName() 
+        => EntityNames.Role;
+
+    protected override string GetAuditAction() 
+        => AuditActions.RoleDeleted;
+
+    protected override string GetAuditMessage(Role entity)
+        => $"Deleted role: {entity.Name}";
+
+    // Override validation to check if role is assigned to users
+    protected override async Task<Result<bool>> ValidateDeletionAsync(
+        Role entity, 
+        CancellationToken cancellationToken)
+    {
+        var usersWithRole = await UnitOfWork.Roles.GetUserCountAsync(entity.Id, cancellationToken);
         if (usersWithRole > 0)
         {
-            return Result<bool>.FailureResult(
-                $"Cannot delete role. It is assigned to {usersWithRole} user(s)", 
-                400);
+            return Result<bool>.FailureResult(ErrorMessages.RoleInUse(usersWithRole), 400);
         }
-
-        // Soft delete
-        var deleted = await _unitOfWork.Roles.SoftDeleteAsync(
-            request.RoleId, 
-            _currentUserService.UserId ?? Guid.Empty, 
-            cancellationToken);
-
-        if (!deleted)
-        {
-            return Result<bool>.FailureResult("Failed to delete role", 500);
-        }
-
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
-
-        // Audit log
-        await _auditService.LogAsync(
-            AuditActions.RoleDeleted,
-            EntityNames.Role,
-            role.Id,
-            _currentUserService.UserId ?? Guid.Empty,
-            $"Role deleted: {role.Name}",
-            cancellationToken);
 
         return Result<bool>.SuccessResult(true);
     }

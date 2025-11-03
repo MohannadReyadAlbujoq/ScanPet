@@ -23,4 +23,15 @@ public interface IUserRepository : IRepository<User>
     Task<IEnumerable<UserRole>> GetActiveUserRolesAsync(Guid userId, CancellationToken cancellationToken = default);
     void AddUserRole(UserRole userRole);
     void RemoveUserRole(UserRole userRole);
+    
+    // Paginated query with roles included (fix N+1)
+    Task<(IEnumerable<User> Items, int TotalCount)> GetPagedWithRolesAsync(
+        int pageNumber,
+        int pageSize,
+        CancellationToken cancellationToken = default);
+    
+    // ? NEW: Get user roles and permissions in single query (fix N+1)
+    Task<(IEnumerable<string> Roles, long PermissionsBitmask)> GetUserRolesAndPermissionsAsync(
+        Guid userId,
+        CancellationToken cancellationToken = default);
 }

@@ -7,7 +7,7 @@ using MobileBackend.Application.Interfaces;
 namespace MobileBackend.Application.Features.Locations.Queries.GetAllLocations;
 
 /// <summary>
-/// Handler for getting all locations
+/// Handler for getting all locations (with accurate order counts - no N+1)
 /// </summary>
 public class GetAllLocationsQueryHandler : IRequestHandler<GetAllLocationsQuery, Result<List<LocationDto>>>
 {
@@ -26,20 +26,21 @@ public class GetAllLocationsQueryHandler : IRequestHandler<GetAllLocationsQuery,
     {
         try
         {
-            var locations = await _unitOfWork.Locations.GetAllAsync();
+            // Use optimized method with SQL aggregation ?
+            var locationsWithCounts = await _unitOfWork.Locations.GetAllWithOrderCountsAsync(cancellationToken);
 
-            var locationDtos = locations.Select(l => new LocationDto
+            var locationDtos = locationsWithCounts.Select(tuple => new LocationDto
             {
-                Id = l.Id,
-                Name = l.Name,
-                Address = l.Address,
-                City = l.City,
-                Country = l.Country,
-                PostalCode = l.PostalCode,
-                IsActive = l.IsActive,
-                OrderCount = l.Orders?.Count ?? 0,
-                CreatedAt = l.CreatedAt,
-                UpdatedAt = l.UpdatedAt
+                Id = tuple.Location.Id,
+                Name = tuple.Location.Name,
+                Address = tuple.Location.Address,
+                City = tuple.Location.City,
+                Country = tuple.Location.Country,
+                PostalCode = tuple.Location.PostalCode,
+                IsActive = tuple.Location.IsActive,
+                OrderCount = tuple.OrderCount,  // ? Accurate count!
+                CreatedAt = tuple.Location.CreatedAt,
+                UpdatedAt = tuple.Location.UpdatedAt
             }).ToList();
 
             _logger.LogInformation("Retrieved {Count} locations", locationDtos.Count);

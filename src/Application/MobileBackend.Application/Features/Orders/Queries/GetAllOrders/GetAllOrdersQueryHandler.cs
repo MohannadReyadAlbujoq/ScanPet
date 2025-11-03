@@ -7,7 +7,7 @@ using MobileBackend.Application.Interfaces;
 namespace MobileBackend.Application.Features.Orders.Queries.GetAllOrders;
 
 /// <summary>
-/// Handler for getting all orders
+/// Handler for getting all orders (with locations included - no N+1)
 /// </summary>
 public class GetAllOrdersQueryHandler : IRequestHandler<GetAllOrdersQuery, Result<List<OrderDto>>>
 {
@@ -26,7 +26,8 @@ public class GetAllOrdersQueryHandler : IRequestHandler<GetAllOrdersQuery, Resul
     {
         try
         {
-            var orders = await _unitOfWork.Orders.GetAllAsync();
+            // Use optimized method that includes locations ?
+            var orders = await _unitOfWork.Orders.GetAllWithLocationsAsync(cancellationToken);
 
             var orderDtos = orders.Select(o => new OrderDto
             {
@@ -35,7 +36,7 @@ public class GetAllOrdersQueryHandler : IRequestHandler<GetAllOrdersQuery, Resul
                 ClientName = o.ClientName,
                 ClientPhone = o.ClientPhone,
                 LocationId = o.LocationId,
-                LocationName = o.Location?.Name,
+                LocationName = o.Location?.Name,  // ? Now works correctly!
                 Description = o.Description,
                 OrderDate = o.OrderDate,
                 TotalAmount = o.TotalAmount,

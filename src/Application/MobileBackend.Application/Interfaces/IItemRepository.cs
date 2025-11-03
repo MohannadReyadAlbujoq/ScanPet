@@ -13,4 +13,10 @@ public interface IItemRepository : IRepository<Item>
     Task<IEnumerable<Item>> GetAvailableItemsAsync(CancellationToken cancellationToken = default);
     Task<IEnumerable<Item>> SearchItemsAsync(string searchTerm, CancellationToken cancellationToken = default);
     Task<bool> IsItemAvailableAsync(Guid itemId, CancellationToken cancellationToken = default);
+    Task<Item?> GetBySkuAsync(string sku, CancellationToken cancellationToken = default);
+    Task<IEnumerable<Item>> GetItemsByColorAsync(Guid colorId, CancellationToken cancellationToken = default);
+    Task<IEnumerable<Item>> GetLowStockItemsAsync(int threshold = 10, CancellationToken cancellationToken = default);
+    Task<bool> IsSkuAvailableAsync(string sku, CancellationToken cancellationToken = default);
+    Task<IEnumerable<Item>> GetAllWithColorsAsync(CancellationToken cancellationToken = default);
+    Task<Item?> GetByIdWithColorAsync(Guid id, CancellationToken cancellationToken = default);
 }

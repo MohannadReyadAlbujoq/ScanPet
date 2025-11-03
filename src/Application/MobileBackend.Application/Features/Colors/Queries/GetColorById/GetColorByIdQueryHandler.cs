@@ -7,7 +7,7 @@ using MobileBackend.Application.Interfaces;
 namespace MobileBackend.Application.Features.Colors.Queries.GetColorById;
 
 /// <summary>
-/// Handler for getting a color by ID
+/// Handler for getting a color by ID (with accurate item count)
 /// </summary>
 public class GetColorByIdQueryHandler : IRequestHandler<GetColorByIdQuery, Result<ColorDto>>
 {
@@ -26,7 +26,8 @@ public class GetColorByIdQueryHandler : IRequestHandler<GetColorByIdQuery, Resul
     {
         try
         {
-            var color = await _unitOfWork.Colors.GetByIdAsync(request.ColorId);
+            // Use optimized method with SQL aggregation ?
+            var (color, itemCount) = await _unitOfWork.Colors.GetByIdWithItemCountAsync(request.ColorId, cancellationToken);
             
             if (color == null)
             {
@@ -42,7 +43,7 @@ public class GetColorByIdQueryHandler : IRequestHandler<GetColorByIdQuery, Resul
                 GreenValue = color.GreenValue,
                 BlueValue = color.BlueValue,
                 HexCode = color.HexCode,
-                ItemCount = color.Items?.Count ?? 0,
+                ItemCount = itemCount,  // ? Accurate count!
                 CreatedAt = color.CreatedAt,
                 UpdatedAt = color.UpdatedAt
             };

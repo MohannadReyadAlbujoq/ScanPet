@@ -7,7 +7,7 @@ using MobileBackend.Application.Interfaces;
 namespace MobileBackend.Application.Features.Items.Queries.GetItemById;
 
 /// <summary>
-/// Handler for getting an item by ID
+/// Handler for getting an item by ID (with color included)
 /// </summary>
 public class GetItemByIdQueryHandler : IRequestHandler<GetItemByIdQuery, Result<ItemDto>>
 {
@@ -26,7 +26,8 @@ public class GetItemByIdQueryHandler : IRequestHandler<GetItemByIdQuery, Result<
     {
         try
         {
-            var item = await _unitOfWork.Items.GetByIdAsync(request.ItemId);
+            // Use optimized method that includes color ?
+            var item = await _unitOfWork.Items.GetByIdWithColorAsync(request.ItemId, cancellationToken);
 
             if (item == null)
             {
@@ -42,7 +43,7 @@ public class GetItemByIdQueryHandler : IRequestHandler<GetItemByIdQuery, Result<
                 BasePrice = item.BasePrice,
                 Quantity = item.Quantity,
                 ColorId = item.ColorId,
-                ColorName = item.Color?.Name,
+                ColorName = item.Color?.Name,  // ? Now works correctly!
                 ImageUrl = item.ImageUrl,
                 CreatedAt = item.CreatedAt,
                 UpdatedAt = item.UpdatedAt

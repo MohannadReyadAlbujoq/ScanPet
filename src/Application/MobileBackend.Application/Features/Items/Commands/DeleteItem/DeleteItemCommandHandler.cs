@@ -1,71 +1,44 @@
 using MediatR;
 using Microsoft.Extensions.Logging;
 using MobileBackend.Application.Common.Constants;
+using MobileBackend.Application.Common.Handlers;
 using MobileBackend.Application.Common.Interfaces;
-using MobileBackend.Application.DTOs.Common;
 using MobileBackend.Application.Interfaces;
+using MobileBackend.Domain.Entities;
 
 namespace MobileBackend.Application.Features.Items.Commands.DeleteItem;
 
 /// <summary>
 /// Handler for deleting (soft delete) an item
+/// Uses BaseSoftDeleteHandler to eliminate code duplication
 /// </summary>
-public class DeleteItemCommandHandler : IRequestHandler<DeleteItemCommand, Result<bool>>
+public class DeleteItemCommandHandler : BaseSoftDeleteHandler<DeleteItemCommand, Item>
 {
-    private readonly IUnitOfWork _unitOfWork;
-    private readonly IAuditService _auditService;
-    private readonly ICurrentUserService _currentUserService;
-    private readonly ILogger<DeleteItemCommandHandler> _logger;
-
     public DeleteItemCommandHandler(
         IUnitOfWork unitOfWork,
         IAuditService auditService,
         ICurrentUserService currentUserService,
+        IDateTimeService dateTimeService,
         ILogger<DeleteItemCommandHandler> logger)
+        : base(unitOfWork, auditService, currentUserService, dateTimeService, logger)
     {
-        _unitOfWork = unitOfWork;
-        _auditService = auditService;
-        _currentUserService = currentUserService;
-        _logger = logger;
     }
 
-    public async Task<Result<bool>> Handle(DeleteItemCommand request, CancellationToken cancellationToken)
-    {
-        try
-        {
-            // Get existing item
-            var item = await _unitOfWork.Items.GetByIdAsync(request.ItemId);
-            if (item == null)
-            {
-                return Result<bool>.FailureResult("Item not found", 404);
-            }
+    protected override Guid GetEntityId(DeleteItemCommand command) 
+        => command.ItemId;
 
-            // Soft delete
-            item.IsDeleted = true;
-            item.DeletedAt = DateTime.UtcNow;
-            item.DeletedBy = _currentUserService.UserId;
+    protected override async Task<Item?> GetEntityAsync(Guid id, CancellationToken cancellationToken)
+        => await UnitOfWork.Items.GetByIdAsync(id, cancellationToken);
 
-            _unitOfWork.Items.Update(item);
-            await _unitOfWork.SaveChangesAsync(cancellationToken);
+    protected override void UpdateEntity(Item entity)
+        => UnitOfWork.Items.Update(entity);
 
-            // Audit log
-            await _auditService.LogAsync(
-                action: AuditActions.ItemDeleted,
-                entityName: EntityNames.Item,
-                entityId: item.Id,
-                userId: _currentUserService.UserId ?? Guid.Empty,
-                additionalInfo: $"Deleted item: {item.Name}",
-                cancellationToken: cancellationToken
-            );
+    protected override string GetEntityName() 
+        => EntityNames.Item;
 
-            _logger.LogInformation("Item deleted successfully: {ItemId} - {ItemName}", item.Id, item.Name);
+    protected override string GetAuditAction() 
+        => AuditActions.ItemDeleted;
 
-            return Result<bool>.SuccessResult(true);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error deleting item: {ItemId}", request.ItemId);
-            return Result<bool>.FailureResult("An error occurred while deleting the item", 500);
-        }
-    }
+    protected override string GetAuditMessage(Item entity)
+        => $"Deleted item: {entity.Name}";
 }

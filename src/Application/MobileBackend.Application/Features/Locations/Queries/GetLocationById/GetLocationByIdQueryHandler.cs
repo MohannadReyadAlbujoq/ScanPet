@@ -7,7 +7,7 @@ using MobileBackend.Application.Interfaces;
 namespace MobileBackend.Application.Features.Locations.Queries.GetLocationById;
 
 /// <summary>
-/// Handler for getting a location by ID
+/// Handler for getting a location by ID (with accurate order count)
 /// </summary>
 public class GetLocationByIdQueryHandler : IRequestHandler<GetLocationByIdQuery, Result<LocationDto>>
 {
@@ -26,7 +26,8 @@ public class GetLocationByIdQueryHandler : IRequestHandler<GetLocationByIdQuery,
     {
         try
         {
-            var location = await _unitOfWork.Locations.GetByIdAsync(request.LocationId);
+            // Use optimized method with SQL aggregation ?
+            var (location, orderCount) = await _unitOfWork.Locations.GetByIdWithOrderCountAsync(request.LocationId, cancellationToken);
 
             if (location == null)
             {
@@ -42,7 +43,7 @@ public class GetLocationByIdQueryHandler : IRequestHandler<GetLocationByIdQuery,
                 Country = location.Country,
                 PostalCode = location.PostalCode,
                 IsActive = location.IsActive,
-                OrderCount = location.Orders?.Count ?? 0,
+                OrderCount = orderCount,  // ? Accurate count!
                 CreatedAt = location.CreatedAt,
                 UpdatedAt = location.UpdatedAt
             };

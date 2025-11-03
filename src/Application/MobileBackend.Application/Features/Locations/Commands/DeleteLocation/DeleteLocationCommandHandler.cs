@@ -1,71 +1,43 @@
-using MediatR;
 using Microsoft.Extensions.Logging;
 using MobileBackend.Application.Common.Constants;
+using MobileBackend.Application.Common.Handlers;
 using MobileBackend.Application.Common.Interfaces;
-using MobileBackend.Application.DTOs.Common;
 using MobileBackend.Application.Interfaces;
+using MobileBackend.Domain.Entities;
 
 namespace MobileBackend.Application.Features.Locations.Commands.DeleteLocation;
 
 /// <summary>
 /// Handler for deleting (soft delete) a location
+/// Uses BaseSoftDeleteHandler to eliminate code duplication
 /// </summary>
-public class DeleteLocationCommandHandler : IRequestHandler<DeleteLocationCommand, Result<bool>>
+public class DeleteLocationCommandHandler : BaseSoftDeleteHandler<DeleteLocationCommand, Location>
 {
-    private readonly IUnitOfWork _unitOfWork;
-    private readonly IAuditService _auditService;
-    private readonly ICurrentUserService _currentUserService;
-    private readonly ILogger<DeleteLocationCommandHandler> _logger;
-
     public DeleteLocationCommandHandler(
         IUnitOfWork unitOfWork,
         IAuditService auditService,
         ICurrentUserService currentUserService,
+        IDateTimeService dateTimeService,
         ILogger<DeleteLocationCommandHandler> logger)
+        : base(unitOfWork, auditService, currentUserService, dateTimeService, logger)
     {
-        _unitOfWork = unitOfWork;
-        _auditService = auditService;
-        _currentUserService = currentUserService;
-        _logger = logger;
     }
 
-    public async Task<Result<bool>> Handle(DeleteLocationCommand request, CancellationToken cancellationToken)
-    {
-        try
-        {
-            // Get existing location
-            var location = await _unitOfWork.Locations.GetByIdAsync(request.LocationId);
-            if (location == null)
-            {
-                return Result<bool>.FailureResult("Location not found", 404);
-            }
+    protected override Guid GetEntityId(DeleteLocationCommand command) 
+        => command.LocationId;
 
-            // Soft delete
-            location.IsDeleted = true;
-            location.DeletedAt = DateTime.UtcNow;
-            location.DeletedBy = _currentUserService.UserId;
+    protected override async Task<Location?> GetEntityAsync(Guid id, CancellationToken cancellationToken)
+        => await UnitOfWork.Locations.GetByIdAsync(id, cancellationToken);
 
-            _unitOfWork.Locations.Update(location);
-            await _unitOfWork.SaveChangesAsync(cancellationToken);
+    protected override void UpdateEntity(Location entity)
+        => UnitOfWork.Locations.Update(entity);
 
-            // Audit log
-            await _auditService.LogAsync(
-                action: AuditActions.LocationDeleted,
-                entityName: EntityNames.Location,
-                entityId: location.Id,
-                userId: _currentUserService.UserId ?? Guid.Empty,
-                additionalInfo: $"Deleted location: {location.Name}",
-                cancellationToken: cancellationToken
-            );
+    protected override string GetEntityName() 
+        => EntityNames.Location;
 
-            _logger.LogInformation("Location deleted successfully: {LocationId} - {LocationName}", location.Id, location.Name);
+    protected override string GetAuditAction() 
+        => AuditActions.LocationDeleted;
 
-            return Result<bool>.SuccessResult(true);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error deleting location: {LocationId}", request.LocationId);
-            return Result<bool>.FailureResult("An error occurred while deleting the location", 500);
-        }
-    }
+    protected override string GetAuditMessage(Location entity)
+        => $"Deleted location: {entity.Name}";
 }

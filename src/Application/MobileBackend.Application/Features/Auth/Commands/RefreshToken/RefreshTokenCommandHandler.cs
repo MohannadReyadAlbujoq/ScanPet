@@ -80,9 +80,8 @@ public class RefreshTokenCommandHandler : IRequestHandler<RefreshTokenCommand, R
                 return Result<LoginResponseDto>.FailureResult("Your account is not active", 403);
             }
 
-            // 6. Get user roles and permissions
-            var roles = await _unitOfWork.Roles.GetRolesByUserIdAsync(user.Id, cancellationToken);
-            var permissionsBitmask = await _unitOfWork.Permissions.GetUserPermissionBitmaskAsync(user.Id, cancellationToken);
+            // ? FIX N+1: Get user roles and permissions in single query
+            var (roles, permissionsBitmask) = await _unitOfWork.Users.GetUserRolesAndPermissionsAsync(user.Id, cancellationToken);
 
             // 7. Generate new access token
             var newAccessToken = _jwtService.GenerateAccessToken(

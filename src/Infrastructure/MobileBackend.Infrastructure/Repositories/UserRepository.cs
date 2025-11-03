@@ -82,21 +82,68 @@ public class UserRepository : GenericRepository<User>, IUserRepository
         _context.RefreshTokens.Add(refreshToken);
     }
 
-    // UserRole management methods
     public async Task<IEnumerable<UserRole>> GetActiveUserRolesAsync(Guid userId, CancellationToken cancellationToken = default)
     {
-        return await _context.UserRoles
-            .Where(ur => ur.UserId == userId && !ur.IsDeleted)
+        return await _context.Set<UserRole>()
+            .Where(ur => ur.UserId == userId)
             .ToListAsync(cancellationToken);
     }
 
     public void AddUserRole(UserRole userRole)
     {
-        _context.UserRoles.Add(userRole);
+        _context.Set<UserRole>().Add(userRole);
     }
 
     public void RemoveUserRole(UserRole userRole)
     {
-        _context.UserRoles.Remove(userRole);
+        _context.Set<UserRole>().Remove(userRole);
+    }
+
+    public async Task<(IEnumerable<User> Items, int TotalCount)> GetPagedWithRolesAsync(
+        int pageNumber,
+        int pageSize,
+        CancellationToken cancellationToken = default)
+    {
+        var query = _dbSet
+            .Include(u => u.UserRoles)
+                .ThenInclude(ur => ur.Role)
+            .OrderBy(u => u.CreatedAt);
+
+        var totalCount = await query.CountAsync(cancellationToken);
+        
+        var items = await query
+            .Skip((pageNumber - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync(cancellationToken);
+
+        return (items, totalCount);
+    }
+
+    public async Task<(IEnumerable<string> Roles, long PermissionsBitmask)> GetUserRolesAndPermissionsAsync(
+        Guid userId,
+        CancellationToken cancellationToken = default)
+    {
+        var query = await _context.Set<UserRole>()
+            .Where(ur => ur.UserId == userId)
+            .Join(_context.Set<Role>(),
+                ur => ur.RoleId,
+                r => r.Id,
+                (ur, r) => new { ur.RoleId, r.Name })
+            .GroupJoin(_context.Set<RolePermission>(),
+                r => r.RoleId,
+                rp => rp.RoleId,
+                (r, rps) => new { r.Name, Permissions = rps })
+            .SelectMany(
+                x => x.Permissions.DefaultIfEmpty(),
+                (x, rp) => new { x.Name, PermissionsBitmask = rp != null ? rp.PermissionsBitmask : 0L })
+            .ToListAsync(cancellationToken);
+
+        var roles = query.Select(q => q.Name).Distinct().ToList();
+        
+        var permissionsBitmask = query
+            .Select(q => q.PermissionsBitmask)
+            .Aggregate(0L, (acc, val) => acc | val);
+
+        return (roles, permissionsBitmask);
     }
 }

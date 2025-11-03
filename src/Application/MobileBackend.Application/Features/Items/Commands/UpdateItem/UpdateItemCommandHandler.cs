@@ -1,91 +1,78 @@
-using MediatR;
 using Microsoft.Extensions.Logging;
 using MobileBackend.Application.Common.Constants;
+using MobileBackend.Application.Common.Handlers;
 using MobileBackend.Application.Common.Interfaces;
 using MobileBackend.Application.DTOs.Common;
 using MobileBackend.Application.Interfaces;
+using MobileBackend.Domain.Entities;
 
 namespace MobileBackend.Application.Features.Items.Commands.UpdateItem;
 
 /// <summary>
 /// Handler for updating an existing item
+/// Uses BaseUpdateHandler to eliminate code duplication
 /// </summary>
-public class UpdateItemCommandHandler : IRequestHandler<UpdateItemCommand, Result<bool>>
+public class UpdateItemCommandHandler : BaseUpdateHandler<UpdateItemCommand, Item>
 {
-    private readonly IUnitOfWork _unitOfWork;
-    private readonly IAuditService _auditService;
-    private readonly ICurrentUserService _currentUserService;
-    private readonly ILogger<UpdateItemCommandHandler> _logger;
-
     public UpdateItemCommandHandler(
         IUnitOfWork unitOfWork,
         IAuditService auditService,
         ICurrentUserService currentUserService,
+        IDateTimeService dateTimeService,
         ILogger<UpdateItemCommandHandler> logger)
+        : base(unitOfWork, auditService, currentUserService, dateTimeService, logger)
     {
-        _unitOfWork = unitOfWork;
-        _auditService = auditService;
-        _currentUserService = currentUserService;
-        _logger = logger;
     }
 
-    public async Task<Result<bool>> Handle(UpdateItemCommand request, CancellationToken cancellationToken)
+    protected override Guid GetEntityId(UpdateItemCommand command) => command.ItemId;
+
+    protected override Task<Item?> GetEntityAsync(Guid id, CancellationToken cancellationToken)
+        => UnitOfWork.Items.GetByIdAsync(id, cancellationToken);
+
+    protected override async Task UpdateEntityPropertiesAsync(
+        UpdateItemCommand command,
+        Item entity,
+        CancellationToken cancellationToken)
     {
-        try
+        entity.Name = command.Name;
+        entity.Description = command.Description;
+        entity.SKU = command.SKU;
+        entity.BasePrice = command.BasePrice;
+        entity.Quantity = command.Quantity;
+        entity.ColorId = command.ColorId;
+        entity.ImageUrl = command.ImageUrl;
+    }
+
+    protected override void UpdateEntity(Item entity)
+    {
+        UnitOfWork.Items.Update(entity);
+    }
+
+    protected override string GetEntityName() => EntityNames.Item;
+
+    protected override string GetAuditAction() => AuditActions.ItemUpdated;
+
+    protected override string CaptureOldValues(Item entity)
+        => $"Name: {entity.Name}, Price: {entity.BasePrice}, Quantity: {entity.Quantity}";
+
+    protected override string CaptureNewValues(Item entity)
+        => $"Name: {entity.Name}, Price: {entity.BasePrice}, Quantity: {entity.Quantity}";
+
+    // Override validation to check color existence
+    protected override async Task<Result<bool>> ValidateAsync(
+        UpdateItemCommand command,
+        Item entity,
+        CancellationToken cancellationToken)
+    {
+        // Validate ColorId if provided
+        if (command.ColorId.HasValue)
         {
-            // Get existing item
-            var item = await _unitOfWork.Items.GetByIdAsync(request.ItemId);
-            if (item == null)
+            var color = await UnitOfWork.Colors.GetByIdAsync(command.ColorId.Value, cancellationToken);
+            if (color == null)
             {
-                return Result<bool>.FailureResult("Item not found", 404);
+                return Result<bool>.FailureResult(ErrorMessages.NotFound("Color"), 404);
             }
-
-            // Validate ColorId if provided
-            if (request.ColorId.HasValue)
-            {
-                var color = await _unitOfWork.Colors.GetByIdAsync(request.ColorId.Value);
-                if (color == null)
-                {
-                    return Result<bool>.FailureResult("Color not found", 404);
-                }
-            }
-
-            // Store old values for audit
-            var oldValues = $"Name: {item.Name}, Price: {item.BasePrice}, Quantity: {item.Quantity}";
-            var newValues = $"Name: {request.Name}, Price: {request.BasePrice}, Quantity: {request.Quantity}";
-
-            // Update item properties
-            item.Name = request.Name;
-            item.Description = request.Description;
-            item.SKU = request.SKU;
-            item.BasePrice = request.BasePrice;
-            item.Quantity = request.Quantity;
-            item.ColorId = request.ColorId;
-            item.ImageUrl = request.ImageUrl;
-            item.UpdatedAt = DateTime.UtcNow;
-
-            _unitOfWork.Items.Update(item);
-            await _unitOfWork.SaveChangesAsync(cancellationToken);
-
-            // Audit log
-            await _auditService.LogActionAsync(
-                userId: _currentUserService.UserId,
-                action: AuditActions.ItemUpdated,
-                entityName: EntityNames.Item,
-                entityId: item.Id,
-                oldValues: oldValues,
-                newValues: newValues,
-                cancellationToken: cancellationToken
-            );
-
-            _logger.LogInformation("Item updated successfully: {ItemId} - {ItemName}", item.Id, item.Name);
-
-            return Result<bool>.SuccessResult(true);
         }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error updating item: {ItemId}", request.ItemId);
-            return Result<bool>.FailureResult("An error occurred while updating the item", 500);
-        }
+        return Result<bool>.SuccessResult(true);
     }
 }

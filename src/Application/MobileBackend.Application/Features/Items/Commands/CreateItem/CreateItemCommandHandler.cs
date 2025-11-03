@@ -1,6 +1,6 @@
-using MediatR;
 using Microsoft.Extensions.Logging;
 using MobileBackend.Application.Common.Constants;
+using MobileBackend.Application.Common.Handlers;
 using MobileBackend.Application.Common.Interfaces;
 using MobileBackend.Application.DTOs.Common;
 using MobileBackend.Application.Interfaces;
@@ -10,77 +10,62 @@ namespace MobileBackend.Application.Features.Items.Commands.CreateItem;
 
 /// <summary>
 /// Handler for creating a new item
+/// Uses BaseCreateHandler to eliminate code duplication
 /// </summary>
-public class CreateItemCommandHandler : IRequestHandler<CreateItemCommand, Result<Guid>>
+public class CreateItemCommandHandler : BaseCreateHandler<CreateItemCommand, Item>
 {
-    private readonly IUnitOfWork _unitOfWork;
-    private readonly IAuditService _auditService;
-    private readonly ICurrentUserService _currentUserService;
-    private readonly ILogger<CreateItemCommandHandler> _logger;
-
     public CreateItemCommandHandler(
         IUnitOfWork unitOfWork,
         IAuditService auditService,
         ICurrentUserService currentUserService,
+        IDateTimeService dateTimeService,
         ILogger<CreateItemCommandHandler> logger)
+        : base(unitOfWork, auditService, currentUserService, dateTimeService, logger)
     {
-        _unitOfWork = unitOfWork;
-        _auditService = auditService;
-        _currentUserService = currentUserService;
-        _logger = logger;
     }
 
-    public async Task<Result<Guid>> Handle(CreateItemCommand request, CancellationToken cancellationToken)
+    protected override async Task<Item> CreateEntityAsync(CreateItemCommand command, CancellationToken cancellationToken)
     {
-        try
+        return new Item
         {
-            // Validate ColorId if provided
-            if (request.ColorId.HasValue)
+            Id = Guid.NewGuid(),
+            Name = command.Name,
+            Description = command.Description,
+            SKU = command.SKU,
+            BasePrice = command.BasePrice,
+            Quantity = command.Quantity,
+            ColorId = command.ColorId,
+            ImageUrl = command.ImageUrl,
+            IsDeleted = false
+        };
+    }
+
+    protected override Task AddEntityAsync(Item entity, CancellationToken cancellationToken)
+    {
+        return UnitOfWork.Items.AddAsync(entity, cancellationToken);
+    }
+
+    protected override string GetEntityName() => EntityNames.Item;
+
+    protected override string GetAuditAction() => AuditActions.ItemCreated;
+
+    protected override string GetAuditMessage(Item entity)
+        => $"Created item: {entity.Name} (SKU: {entity.SKU}, Price: {entity.BasePrice}, Qty: {entity.Quantity})";
+
+    // Override validation to check color existence
+    protected override async Task<Result<Guid>> ValidateAsync(
+        CreateItemCommand command,
+        CancellationToken cancellationToken)
+    {
+        // Validate ColorId if provided
+        if (command.ColorId.HasValue)
+        {
+            var color = await UnitOfWork.Colors.GetByIdAsync(command.ColorId.Value, cancellationToken);
+            if (color == null)
             {
-                var color = await _unitOfWork.Colors.GetByIdAsync(request.ColorId.Value);
-                if (color == null)
-                {
-                    return Result<Guid>.FailureResult("Color not found", 404);
-                }
+                return Result<Guid>.FailureResult(ErrorMessages.NotFound("Color"), 404);
             }
-
-            // Create new item
-            var item = new Item
-            {
-                Id = Guid.NewGuid(),
-                Name = request.Name,
-                Description = request.Description,
-                SKU = request.SKU,
-                BasePrice = request.BasePrice,
-                Quantity = request.Quantity,
-                ColorId = request.ColorId,
-                ImageUrl = request.ImageUrl,
-                CreatedAt = DateTime.UtcNow,
-                UpdatedAt = DateTime.UtcNow,
-                IsDeleted = false
-            };
-
-            await _unitOfWork.Items.AddAsync(item);
-            await _unitOfWork.SaveChangesAsync(cancellationToken);
-
-            // Audit log
-            await _auditService.LogAsync(
-                action: AuditActions.ItemCreated,
-                entityName: EntityNames.Item,
-                entityId: item.Id,
-                userId: _currentUserService.UserId ?? Guid.Empty,
-                additionalInfo: $"Created item: {item.Name}, Price: {item.BasePrice}, Quantity: {item.Quantity}",
-                cancellationToken: cancellationToken
-            );
-
-            _logger.LogInformation("Item created successfully: {ItemId} - {ItemName}", item.Id, item.Name);
-
-            return Result<Guid>.SuccessResult(item.Id);
         }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error creating item: {ItemName}", request.Name);
-            return Result<Guid>.FailureResult("An error occurred while creating the item", 500);
-        }
+        return Result<Guid>.SuccessResult(Guid.Empty);
     }
 }

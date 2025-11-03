@@ -7,7 +7,7 @@ using MobileBackend.Application.Interfaces;
 namespace MobileBackend.Application.Features.Items.Queries.GetAllItems;
 
 /// <summary>
-/// Handler for getting all items
+/// Handler for getting all items (with colors included - no N+1)
 /// </summary>
 public class GetAllItemsQueryHandler : IRequestHandler<GetAllItemsQuery, Result<List<ItemDto>>>
 {
@@ -26,7 +26,8 @@ public class GetAllItemsQueryHandler : IRequestHandler<GetAllItemsQuery, Result<
     {
         try
         {
-            var items = await _unitOfWork.Items.GetAllAsync();
+            // Use optimized method that includes colors ?
+            var items = await _unitOfWork.Items.GetAllWithColorsAsync(cancellationToken);
 
             var itemDtos = items.Select(i => new ItemDto
             {
@@ -37,7 +38,7 @@ public class GetAllItemsQueryHandler : IRequestHandler<GetAllItemsQuery, Result<
                 BasePrice = i.BasePrice,
                 Quantity = i.Quantity,
                 ColorId = i.ColorId,
-                ColorName = i.Color?.Name,
+                ColorName = i.Color?.Name,  // ? Now works correctly!
                 ImageUrl = i.ImageUrl,
                 CreatedAt = i.CreatedAt,
                 UpdatedAt = i.UpdatedAt

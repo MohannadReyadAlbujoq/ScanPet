@@ -48,13 +48,26 @@ public class CreateOrderCommandHandler : IRequestHandler<CreateOrderCommand, Res
                 return Result<Guid>.FailureResult("Order must contain at least one item", 400);
             }
 
+            // ? FIX N+1: Fetch all items in single query before loop
+            var itemIds = request.OrderItems
+                .Where(oi => oi.ItemId.HasValue)
+                .Select(oi => oi.ItemId!.Value)
+                .Distinct()
+                .ToList();
+
+            var items = await _unitOfWork.Items.FindAsync(
+                i => itemIds.Contains(i.Id), 
+                cancellationToken);
+            
+            var itemsDict = items.ToDictionary(i => i.Id);
+
             decimal totalAmount = 0;
             var orderItems = new List<OrderItem>();
 
             foreach (var itemDto in request.OrderItems)
             {
-                var item = await _unitOfWork.Items.GetByIdAsync(itemDto.ItemId ?? Guid.Empty);
-                if (item == null)
+                // ? Now using dictionary lookup instead of database query
+                if (!itemDto.ItemId.HasValue || !itemsDict.TryGetValue(itemDto.ItemId.Value, out var item))
                 {
                     return Result<Guid>.FailureResult($"Item with ID {itemDto.ItemId} not found", 404);
                 }

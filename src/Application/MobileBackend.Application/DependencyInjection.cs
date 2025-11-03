@@ -3,6 +3,7 @@ using FluentValidation;
 using MediatR;
 using Microsoft.Extensions.DependencyInjection;
 using MobileBackend.Application.Common.Behaviors;
+using MobileBackend.Application.Common.Helpers;
 
 namespace MobileBackend.Application;
 
@@ -23,26 +24,23 @@ public static class DependencyInjection
     /// <returns>The service collection for chaining</returns>
     public static IServiceCollection AddApplication(this IServiceCollection services)
     {
-        var assembly = Assembly.GetExecutingAssembly();
+        // 1. Register AutoMapper
+        services.AddAutoMapper(Assembly.GetExecutingAssembly());
 
-        // 1. MediatR - Command Query Responsibility Segregation (CQRS)
-        services.AddMediatR(cfg => 
-        {
-            cfg.RegisterServicesFromAssembly(assembly);
-        });
+        // 2. Register MediatR
+        services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(Assembly.GetExecutingAssembly()));
 
-        // 2. FluentValidation - Input validation
-        services.AddValidatorsFromAssembly(assembly);
+        // 3. Register FluentValidation validators
+        services.AddValidatorsFromAssembly(Assembly.GetExecutingAssembly());
 
-        // 3. AutoMapper - Object-to-object mapping
-        services.AddAutoMapper(assembly);
-
-        // 4. MediatR Pipeline Behaviors (cross-cutting concerns)
-        // Order matters: Logging ? Validation ? Transaction ? Performance ? Handler
-        services.AddTransient(typeof(IPipelineBehavior<,>), typeof(LoggingBehavior<,>));
+        // 4. Register MediatR Behaviors (Pipeline)
         services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
-        services.AddTransient(typeof(IPipelineBehavior<,>), typeof(TransactionBehavior<,>));
+        services.AddTransient(typeof(IPipelineBehavior<,>), typeof(LoggingBehavior<,>));
         services.AddTransient(typeof(IPipelineBehavior<,>), typeof(PerformanceBehavior<,>));
+        services.AddTransient(typeof(IPipelineBehavior<,>), typeof(TransactionBehavior<,>));
+
+        // 5. Register Helper Services
+        services.AddScoped<AuditHelper>();
 
         return services;
     }

@@ -1,4 +1,3 @@
-using AutoMapper;
 using MediatR;
 using Microsoft.Extensions.Logging;
 using MobileBackend.Application.DTOs.Colors;
@@ -8,7 +7,7 @@ using MobileBackend.Application.Interfaces;
 namespace MobileBackend.Application.Features.Colors.Queries.GetAllColors;
 
 /// <summary>
-/// Handler for getting all colors
+/// Handler for getting all colors (with accurate item counts - no N+1)
 /// </summary>
 public class GetAllColorsQueryHandler : IRequestHandler<GetAllColorsQuery, Result<List<ColorDto>>>
 {
@@ -27,20 +26,21 @@ public class GetAllColorsQueryHandler : IRequestHandler<GetAllColorsQuery, Resul
     {
         try
         {
-            var colors = await _unitOfWork.Colors.GetAllAsync();
+            // Use optimized method with SQL aggregation ?
+            var colorsWithCounts = await _unitOfWork.Colors.GetAllWithItemCountsAsync(cancellationToken);
 
-            var colorDtos = colors.Select(c => new ColorDto
+            var colorDtos = colorsWithCounts.Select(tuple => new ColorDto
             {
-                Id = c.Id,
-                Name = c.Name,
-                Description = c.Description,
-                RedValue = c.RedValue,
-                GreenValue = c.GreenValue,
-                BlueValue = c.BlueValue,
-                HexCode = c.HexCode,
-                ItemCount = c.Items?.Count ?? 0,
-                CreatedAt = c.CreatedAt,
-                UpdatedAt = c.UpdatedAt
+                Id = tuple.Color.Id,
+                Name = tuple.Color.Name,
+                Description = tuple.Color.Description,
+                RedValue = tuple.Color.RedValue,
+                GreenValue = tuple.Color.GreenValue,
+                BlueValue = tuple.Color.BlueValue,
+                HexCode = tuple.Color.HexCode,
+                ItemCount = tuple.ItemCount,  // ? Accurate count!
+                CreatedAt = tuple.Color.CreatedAt,
+                UpdatedAt = tuple.Color.UpdatedAt
             }).ToList();
 
             _logger.LogInformation("Retrieved {Count} colors", colorDtos.Count);

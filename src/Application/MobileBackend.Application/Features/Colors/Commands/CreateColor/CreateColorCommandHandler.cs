@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.Extensions.Logging;
 using MobileBackend.Application.Common.Constants;
+using MobileBackend.Application.Common.Handlers;
 using MobileBackend.Application.Common.Interfaces;
 using MobileBackend.Application.DTOs.Common;
 using MobileBackend.Application.Interfaces;
@@ -10,75 +11,56 @@ namespace MobileBackend.Application.Features.Colors.Commands.CreateColor;
 
 /// <summary>
 /// Handler for creating a new color
+/// Uses BaseCreateHandler to eliminate code duplication
 /// </summary>
-public class CreateColorCommandHandler : IRequestHandler<CreateColorCommand, Result<Guid>>
+public class CreateColorCommandHandler : BaseCreateHandler<CreateColorCommand, Color>
 {
-    private readonly IColorRepository _colorRepository;
-    private readonly IUnitOfWork _unitOfWork;
-    private readonly IAuditService _auditService;
-    private readonly ICurrentUserService _currentUserService;
-    private readonly ILogger<CreateColorCommandHandler> _logger;
-
     public CreateColorCommandHandler(
-        IColorRepository colorRepository,
         IUnitOfWork unitOfWork,
         IAuditService auditService,
         ICurrentUserService currentUserService,
+        IDateTimeService dateTimeService,
         ILogger<CreateColorCommandHandler> logger)
+        : base(unitOfWork, auditService, currentUserService, dateTimeService, logger)
     {
-        _colorRepository = colorRepository;
-        _unitOfWork = unitOfWork;
-        _auditService = auditService;
-        _currentUserService = currentUserService;
-        _logger = logger;
     }
 
-    public async Task<Result<Guid>> Handle(CreateColorCommand request, CancellationToken cancellationToken)
+    protected override async Task<Color> CreateEntityAsync(CreateColorCommand command, CancellationToken cancellationToken)
     {
-        try
+        return new Color
         {
-            // Check if color with same name already exists
-            var existingColor = await _colorRepository.GetByNameAsync(request.Name, cancellationToken);
-            if (existingColor != null)
-            {
-                return Result<Guid>.FailureResult("A color with this name already exists", 409);
-            }
+            Id = Guid.NewGuid(),
+            Name = command.Name,
+            Description = command.Description,
+            RedValue = command.RedValue,
+            GreenValue = command.GreenValue,
+            BlueValue = command.BlueValue,
+            IsDeleted = false
+        };
+    }
 
-            // Create new color
-            var color = new Color
-            {
-                Id = Guid.NewGuid(),
-                Name = request.Name,
-                Description = request.Description,
-                RedValue = request.RedValue,
-                GreenValue = request.GreenValue,
-                BlueValue = request.BlueValue,
-                CreatedAt = DateTime.UtcNow,
-                UpdatedAt = DateTime.UtcNow,
-                IsDeleted = false
-            };
+    protected override Task AddEntityAsync(Color entity, CancellationToken cancellationToken)
+    {
+        return UnitOfWork.Colors.AddAsync(entity, cancellationToken);
+    }
 
-            await _colorRepository.AddAsync(color);
-            await _unitOfWork.SaveChangesAsync(cancellationToken);
+    protected override string GetEntityName() => EntityNames.Color;
 
-            // Audit log
-            await _auditService.LogAsync(
-                action: AuditActions.ColorCreated,
-                entityName: EntityNames.Color,
-                entityId: color.Id,
-                userId: _currentUserService.UserId ?? Guid.Empty,
-                additionalInfo: $"Created color: {color.Name} (RGB: {color.RedValue}, {color.GreenValue}, {color.BlueValue})",
-                cancellationToken: cancellationToken
-            );
+    protected override string GetAuditAction() => AuditActions.ColorCreated;
 
-            _logger.LogInformation("Color created successfully: {ColorId} - {ColorName}", color.Id, color.Name);
+    protected override string GetAuditMessage(Color entity)
+        => $"Created color: {entity.Name} (RGB: {entity.RedValue}, {entity.GreenValue}, {entity.BlueValue})";
 
-            return Result<Guid>.SuccessResult(color.Id);
-        }
-        catch (Exception ex)
+    // Override uniqueness validation
+    protected override async Task<Result<Guid>> ValidateUniquenessAsync(
+        CreateColorCommand command,
+        CancellationToken cancellationToken)
+    {
+        var existingColor = await UnitOfWork.Colors.GetByNameAsync(command.Name, cancellationToken);
+        if (existingColor != null)
         {
-            _logger.LogError(ex, "Error creating color: {ColorName}", request.Name);
-            return Result<Guid>.FailureResult("An error occurred while creating the color", 500);
+            return Result<Guid>.FailureResult(ErrorMessages.AlreadyExists("Color", "name"), 409);
         }
+        return Result<Guid>.SuccessResult(Guid.Empty);
     }
 }
