@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using MobileBackend.API.Controllers.Base;
 using MobileBackend.Application.DTOs.Users;
 using MobileBackend.Application.Features.Users.Commands.ApproveUser;
 using MobileBackend.Application.Features.Users.Commands.CreateUser;
@@ -17,17 +18,11 @@ namespace MobileBackend.API.Controllers;
 /// </summary>
 [ApiController]
 [Route("api/[controller]")]
-[Authorize] // Require authentication for all endpoints
-[Produces("application/json")]
-public class UsersController : ControllerBase
+public class UsersController : BaseApiController
 {
-    private readonly IMediator _mediator;
-    private readonly ILogger<UsersController> _logger;
-
     public UsersController(IMediator mediator, ILogger<UsersController> logger)
+        : base(mediator, logger)
     {
-        _mediator = mediator;
-        _logger = logger;
     }
 
     /// <summary>
@@ -47,22 +42,11 @@ public class UsersController : ControllerBase
             PageSize = pageSize
         };
 
-        var result = await _mediator.Send(query);
+        var result = await Mediator.Send(query);
 
-        if (!result.Success)
-        {
-            return StatusCode(result.StatusCode, new
-            {
-                success = false,
-                message = result.ErrorMessage
-            });
-        }
-
-        return Ok(new
-        {
-            success = true,
-            data = result.Data
-        });
+        return result.Success 
+            ? OkResponse(result.Data) 
+            : ErrorResponse(result);
     }
 
     /// <summary>
@@ -77,22 +61,11 @@ public class UsersController : ControllerBase
     public async Task<IActionResult> GetById(Guid id)
     {
         var query = new GetUserByIdQuery { UserId = id };
-        var result = await _mediator.Send(query);
+        var result = await Mediator.Send(query);
 
-        if (!result.Success)
-        {
-            return StatusCode(result.StatusCode, new
-            {
-                success = false,
-                message = result.ErrorMessage
-            });
-        }
-
-        return Ok(new
-        {
-            success = true,
-            data = result.Data
-        });
+        return result.Success 
+            ? OkResponse(result.Data) 
+            : ErrorResponse(result);
     }
 
     /// <summary>
@@ -111,11 +84,7 @@ public class UsersController : ControllerBase
             string.IsNullOrWhiteSpace(dto.Email) || 
             string.IsNullOrWhiteSpace(dto.Password))
         {
-            return BadRequest(new
-            {
-                success = false,
-                message = "Username, Email, and Password are required"
-            });
+            return BadRequestResponse("Username, Email, and Password are required");
         }
 
         var command = new CreateUserCommand
@@ -127,24 +96,11 @@ public class UsersController : ControllerBase
             PhoneNumber = dto.PhoneNumber
         };
 
-        var result = await _mediator.Send(command);
+        var result = await Mediator.Send(command);
 
-        if (!result.Success)
-        {
-            return StatusCode(result.StatusCode, new
-            {
-                success = false,
-                message = result.ErrorMessage,
-                errors = result.ValidationErrors
-            });
-        }
-
-        return StatusCode(StatusCodes.Status201Created, new
-        {
-            success = true,
-            message = "User created successfully",
-            userId = result.Data
-        });
+        return result.Success 
+            ? CreatedResponse(result.Data, "User") 
+            : ErrorResponse(result);
     }
 
     /// <summary>
@@ -162,11 +118,7 @@ public class UsersController : ControllerBase
     {
         if (id != request.UserId)
         {
-            return BadRequest(new
-            {
-                success = false,
-                message = "User ID mismatch"
-            });
+            return BadRequestResponse("User ID mismatch");
         }
 
         var command = new ApproveUserCommand
@@ -176,22 +128,11 @@ public class UsersController : ControllerBase
             IsEnabled = request.IsEnabled
         };
 
-        var result = await _mediator.Send(command);
+        var result = await Mediator.Send(command);
 
-        if (!result.Success)
-        {
-            return StatusCode(result.StatusCode, new
-            {
-                success = false,
-                message = result.ErrorMessage
-            });
-        }
-
-        return Ok(new
-        {
-            success = true,
-            message = $"User {(request.IsApproved ? "approved" : "rejected")} successfully"
-        });
+        return result.Success 
+            ? OkResponse($"User {(request.IsApproved ? "approved" : "rejected")} successfully") 
+            : ErrorResponse(result);
     }
 
     /// <summary>
@@ -213,22 +154,11 @@ public class UsersController : ControllerBase
             RoleId = request.RoleId
         };
 
-        var result = await _mediator.Send(command);
+        var result = await Mediator.Send(command);
 
-        if (!result.Success)
-        {
-            return StatusCode(result.StatusCode, new
-            {
-                success = false,
-                message = result.ErrorMessage
-            });
-        }
-
-        return Ok(new
-        {
-            success = true,
-            message = "User role updated successfully"
-        });
+        return result.Success 
+            ? OkResponse("User role updated successfully") 
+            : ErrorResponse(result);
     }
 
     /// <summary>
@@ -250,21 +180,10 @@ public class UsersController : ControllerBase
             IsEnabled = request.IsEnabled
         };
 
-        var result = await _mediator.Send(command);
+        var result = await Mediator.Send(command);
 
-        if (!result.Success)
-        {
-            return StatusCode(result.StatusCode, new
-            {
-                success = false,
-                message = result.ErrorMessage
-            });
-        }
-
-        return Ok(new
-        {
-            success = true,
-            message = $"User {(request.IsEnabled ? "enabled" : "disabled")} successfully"
-        });
+        return result.Success 
+            ? OkResponse($"User {(request.IsEnabled ? "enabled" : "disabled")} successfully") 
+            : ErrorResponse(result);
     }
 }

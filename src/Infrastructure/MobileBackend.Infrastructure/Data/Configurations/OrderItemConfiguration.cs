@@ -50,6 +50,9 @@ public class OrderItemConfiguration : IEntityTypeConfiguration<OrderItem>
 
         builder.Property(oi => oi.RefundReason)
             .HasColumnType("text");
+        
+        builder.Property(oi => oi.RefundedToInventoryId)
+            .IsRequired(false);
 
         builder.Property(oi => oi.CreatedAt)
             .IsRequired();
@@ -91,6 +94,11 @@ public class OrderItemConfiguration : IEntityTypeConfiguration<OrderItem>
         builder.HasOne<User>()
             .WithMany()
             .HasForeignKey(oi => oi.CreatedBy)
+            .OnDelete(DeleteBehavior.Restrict);
+        
+        builder.HasOne(oi => oi.RefundedToInventory)
+            .WithMany()
+            .HasForeignKey(oi => oi.RefundedToInventoryId)
             .OnDelete(DeleteBehavior.Restrict);
     }
 }

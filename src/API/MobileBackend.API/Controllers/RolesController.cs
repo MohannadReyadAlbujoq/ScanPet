@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using MobileBackend.API.Controllers.Base;
 using MobileBackend.Application.DTOs.Roles;
 using MobileBackend.Application.Features.Roles.Commands.AssignPermissions;
 using MobileBackend.Application.Features.Roles.Commands.CreateRole;
@@ -17,17 +18,11 @@ namespace MobileBackend.API.Controllers;
 /// </summary>
 [ApiController]
 [Route("api/[controller]")]
-[Authorize]
-[Produces("application/json")]
-public class RolesController : ControllerBase
+public class RolesController : BaseApiController
 {
-    private readonly IMediator _mediator;
-    private readonly ILogger<RolesController> _logger;
-
     public RolesController(IMediator mediator, ILogger<RolesController> logger)
+        : base(mediator, logger)
     {
-        _mediator = mediator;
-        _logger = logger;
     }
 
     /// <summary>
@@ -40,22 +35,11 @@ public class RolesController : ControllerBase
     public async Task<IActionResult> GetAll()
     {
         var query = new GetAllRolesQuery();
-        var result = await _mediator.Send(query);
+        var result = await Mediator.Send(query);
 
-        if (!result.Success)
-        {
-            return StatusCode(result.StatusCode, new
-            {
-                success = false,
-                message = result.ErrorMessage
-            });
-        }
-
-        return Ok(new
-        {
-            success = true,
-            data = result.Data
-        });
+        return result.Success 
+            ? OkResponse(result.Data) 
+            : ErrorResponse(result);
     }
 
     /// <summary>
@@ -70,22 +54,11 @@ public class RolesController : ControllerBase
     public async Task<IActionResult> GetById(Guid id)
     {
         var query = new GetRoleByIdQuery { RoleId = id };
-        var result = await _mediator.Send(query);
+        var result = await Mediator.Send(query);
 
-        if (!result.Success)
-        {
-            return StatusCode(result.StatusCode, new
-            {
-                success = false,
-                message = result.ErrorMessage
-            });
-        }
-
-        return Ok(new
-        {
-            success = true,
-            data = result.Data
-        });
+        return result.Success 
+            ? OkResponse(result.Data) 
+            : ErrorResponse(result);
     }
 
     /// <summary>
@@ -105,24 +78,11 @@ public class RolesController : ControllerBase
             Description = dto.Description
         };
 
-        var result = await _mediator.Send(command);
+        var result = await Mediator.Send(command);
 
-        if (!result.Success)
-        {
-            return StatusCode(result.StatusCode, new
-            {
-                success = false,
-                message = result.ErrorMessage,
-                errors = result.ValidationErrors
-            });
-        }
-
-        return StatusCode(StatusCodes.Status201Created, new
-        {
-            success = true,
-            message = "Role created successfully",
-            roleId = result.Data
-        });
+        return result.Success 
+            ? CreatedResponse(result.Data, "Role") 
+            : ErrorResponse(result);
     }
 
     /// <summary>
@@ -145,22 +105,11 @@ public class RolesController : ControllerBase
             Description = dto.Description
         };
 
-        var result = await _mediator.Send(command);
+        var result = await Mediator.Send(command);
 
-        if (!result.Success)
-        {
-            return StatusCode(result.StatusCode, new
-            {
-                success = false,
-                message = result.ErrorMessage
-            });
-        }
-
-        return Ok(new
-        {
-            success = true,
-            message = "Role updated successfully"
-        });
+        return result.Success 
+            ? OkResponse("Role updated successfully") 
+            : ErrorResponse(result);
     }
 
     /// <summary>
@@ -176,22 +125,11 @@ public class RolesController : ControllerBase
     public async Task<IActionResult> Delete(Guid id)
     {
         var command = new DeleteRoleCommand { RoleId = id };
-        var result = await _mediator.Send(command);
+        var result = await Mediator.Send(command);
 
-        if (!result.Success)
-        {
-            return StatusCode(result.StatusCode, new
-            {
-                success = false,
-                message = result.ErrorMessage
-            });
-        }
-
-        return Ok(new
-        {
-            success = true,
-            message = "Role deleted successfully"
-        });
+        return result.Success 
+            ? OkResponse("Role deleted successfully") 
+            : ErrorResponse(result);
     }
 
     /// <summary>
@@ -209,11 +147,7 @@ public class RolesController : ControllerBase
     {
         if (id != request.RoleId)
         {
-            return BadRequest(new
-            {
-                success = false,
-                message = "Role ID mismatch"
-            });
+            return BadRequestResponse("Role ID mismatch");
         }
 
         var command = new AssignPermissionsCommand
@@ -222,21 +156,10 @@ public class RolesController : ControllerBase
             Permissions = request.Permissions
         };
 
-        var result = await _mediator.Send(command);
+        var result = await Mediator.Send(command);
 
-        if (!result.Success)
-        {
-            return StatusCode(result.StatusCode, new
-            {
-                success = false,
-                message = result.ErrorMessage
-            });
-        }
-
-        return Ok(new
-        {
-            success = true,
-            message = "Permissions assigned successfully"
-        });
+        return result.Success 
+            ? OkResponse("Permissions assigned successfully") 
+            : ErrorResponse(result);
     }
 }

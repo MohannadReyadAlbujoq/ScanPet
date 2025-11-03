@@ -49,6 +49,19 @@ public static class AuditActions
     public const string OrderCancelled = "OrderCancelled";
     public const string ItemRefunded = "ItemRefunded";
     public const string OrderItemRefunded = "OrderItemRefunded";
+    
+    // Inventory actions (NEW)
+    public const string InventoryCreated = "InventoryCreated";
+    public const string InventoryUpdated = "InventoryUpdated";
+    public const string InventoryDeleted = "InventoryDeleted";
+    public const string ItemInventorySet = "ItemInventorySet";
+    public const string InventoryAdjusted = "InventoryAdjusted";
+    public const string InventoryTransferred = "InventoryTransferred";
+    
+    // Generic actions
+    public const string Create = "Create";
+    public const string Update = "Update";
+    public const string Delete = "Delete";
 }
 
 /// <summary>
@@ -65,6 +78,8 @@ public static class EntityNames
     public const string Item = "Item";
     public const string Order = "Order";
     public const string OrderItem = "OrderItem";
+    public const string Inventory = "Inventory"; // NEW
+    public const string ItemInventory = "ItemInventory"; // NEW
 }
 
 /// <summary>

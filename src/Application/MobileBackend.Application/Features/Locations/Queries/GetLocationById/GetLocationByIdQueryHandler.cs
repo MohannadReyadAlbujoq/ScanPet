@@ -1,61 +1,57 @@
 using MediatR;
 using Microsoft.Extensions.Logging;
-using MobileBackend.Application.DTOs.Common;
+using MobileBackend.Application.Common.Constants;
+using MobileBackend.Application.Common.Handlers;
 using MobileBackend.Application.DTOs.Locations;
 using MobileBackend.Application.Interfaces;
+using MobileBackend.Domain.Entities;
 
 namespace MobileBackend.Application.Features.Locations.Queries.GetLocationById;
 
 /// <summary>
 /// Handler for getting a location by ID (with accurate order count)
+/// Uses BaseGetByIdHandler to eliminate code duplication
 /// </summary>
-public class GetLocationByIdQueryHandler : IRequestHandler<GetLocationByIdQuery, Result<LocationDto>>
+public class GetLocationByIdQueryHandler : BaseGetByIdHandler<GetLocationByIdQuery, Location, LocationDto>
 {
     private readonly IUnitOfWork _unitOfWork;
-    private readonly ILogger<GetLocationByIdQueryHandler> _logger;
+    private int _orderCount = 0;
 
     public GetLocationByIdQueryHandler(
         IUnitOfWork unitOfWork,
         ILogger<GetLocationByIdQueryHandler> logger)
+        : base(logger)
     {
         _unitOfWork = unitOfWork;
-        _logger = logger;
     }
 
-    public async Task<Result<LocationDto>> Handle(GetLocationByIdQuery request, CancellationToken cancellationToken)
+    protected override async Task<Location?> GetEntityByIdAsync(Guid id, CancellationToken cancellationToken)
     {
-        try
-        {
-            // Use optimized method with SQL aggregation ?
-            var (location, orderCount) = await _unitOfWork.Locations.GetByIdWithOrderCountAsync(request.LocationId, cancellationToken);
-
-            if (location == null)
-            {
-                return Result<LocationDto>.FailureResult("Location not found", 404);
-            }
-
-            var locationDto = new LocationDto
-            {
-                Id = location.Id,
-                Name = location.Name,
-                Address = location.Address,
-                City = location.City,
-                Country = location.Country,
-                PostalCode = location.PostalCode,
-                IsActive = location.IsActive,
-                OrderCount = orderCount,  // ? Accurate count!
-                CreatedAt = location.CreatedAt,
-                UpdatedAt = location.UpdatedAt
-            };
-
-            _logger.LogInformation("Retrieved location: {LocationId} - {LocationName}", location.Id, location.Name);
-
-            return Result<LocationDto>.SuccessResult(locationDto);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error retrieving location: {LocationId}", request.LocationId);
-            return Result<LocationDto>.FailureResult("An error occurred while retrieving the location", 500);
-        }
+        // Use optimized method with SQL aggregation ?
+        var (location, orderCount) = await _unitOfWork.Locations.GetByIdWithOrderCountAsync(id, cancellationToken);
+        
+        // Store order count for use in MapToDto
+        _orderCount = orderCount;
+        
+        return location;
     }
+
+    protected override LocationDto MapToDto(Location entity)
+    {
+        return new LocationDto
+        {
+            Id = entity.Id,
+            Name = entity.Name,
+            Address = entity.Address,
+            City = entity.City,
+            Country = entity.Country,
+            PostalCode = entity.PostalCode,
+            IsActive = entity.IsActive,
+            OrderCount = _orderCount,  // ? Accurate count from SQL!
+            CreatedAt = entity.CreatedAt,
+            UpdatedAt = entity.UpdatedAt
+        };
+    }
+
+    protected override string GetEntityName() => EntityNames.Location;
 }

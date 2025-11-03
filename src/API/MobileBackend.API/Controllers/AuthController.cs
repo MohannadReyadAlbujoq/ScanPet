@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MobileBackend.Application.DTOs.Auth;
 using MobileBackend.Application.Features.Auth.Commands.Login;
+using MobileBackend.Application.Features.Auth.Commands.Logout;
 using MobileBackend.Application.Features.Auth.Commands.RefreshToken;
 using MobileBackend.Application.Features.Auth.Commands.Register;
 
@@ -159,6 +160,7 @@ public class AuthController : ControllerBase
     /// <summary>
     /// Logout (revoke refresh token)
     /// </summary>
+    /// <param name="refreshToken">Optional refresh token to revoke (if not provided, all tokens are revoked)</param>
     /// <returns>Success message</returns>
     /// <response code="200">Logout successful</response>
     /// <response code="401">Not authenticated</response>
@@ -166,12 +168,23 @@ public class AuthController : ControllerBase
     [Authorize]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    public IActionResult Logout()
+    public async Task<IActionResult> Logout([FromBody] string? refreshToken = null)
     {
-        // TODO: Implement logout command to revoke refresh token
-        // For now, client should just delete tokens from local storage
-        
-        _logger.LogInformation("User logged out");
+        var command = new LogoutCommand
+        {
+            RefreshToken = refreshToken
+        };
+
+        var result = await _mediator.Send(command);
+
+        if (!result.Success)
+        {
+            return StatusCode(result.StatusCode, new
+            {
+                success = false,
+                message = result.ErrorMessage
+            });
+        }
 
         return Ok(new
         {

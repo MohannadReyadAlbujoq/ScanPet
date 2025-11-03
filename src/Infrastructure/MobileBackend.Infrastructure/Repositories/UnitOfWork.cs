@@ -19,12 +19,14 @@ public class UnitOfWork : IUnitOfWork
     private IRoleRepository? _roleRepository;
     private IPermissionRepository? _permissionRepository;
     private IOrderRepository? _orderRepository;
-    private IOrderItemRepository? _orderItemRepository;  // Added
+    private IOrderItemRepository? _orderItemRepository;
     private IItemRepository? _itemRepository;
     private IColorRepository? _colorRepository;
     private ILocationRepository? _locationRepository;
     private IAuditLogRepository? _auditLogRepository;
     private IRefreshTokenRepository? _refreshTokenRepository;
+    private IItemInventoryRepository? _itemInventoryRepository;
+    private IInventoryRepository? _inventoryRepository; // NEW
 
     // Dictionary for generic repositories
     private readonly Dictionary<Type, object> _repositories = new();
@@ -43,12 +45,14 @@ public class UnitOfWork : IUnitOfWork
     public IRoleRepository Roles => _roleRepository ??= new RoleRepository(_context);
     public IPermissionRepository Permissions => _permissionRepository ??= new PermissionRepository(_context);
     public IOrderRepository Orders => _orderRepository ??= new OrderRepository(_context);
-    public IOrderItemRepository OrderItems => _orderItemRepository ??= new OrderItemRepository(_context);  // Added
+    public IOrderItemRepository OrderItems => _orderItemRepository ??= new OrderItemRepository(_context);
     public IItemRepository Items => _itemRepository ??= new ItemRepository(_context);
     public IColorRepository Colors => _colorRepository ??= new ColorRepository(_context);
     public ILocationRepository Locations => _locationRepository ??= new LocationRepository(_context);
     public IAuditLogRepository AuditLogs => _auditLogRepository ??= new AuditLogRepository(_context);
     public IRefreshTokenRepository RefreshTokens => _refreshTokenRepository ??= new RefreshTokenRepository(_context);
+    public IItemInventoryRepository ItemInventories => _itemInventoryRepository ??= new ItemInventoryRepository(_context);
+    public IInventoryRepository Inventories => _inventoryRepository ??= new InventoryRepository(_context); // NEW
 
     #endregion
 

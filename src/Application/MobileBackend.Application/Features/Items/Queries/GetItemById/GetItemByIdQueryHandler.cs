@@ -1,62 +1,52 @@
 using MediatR;
 using Microsoft.Extensions.Logging;
-using MobileBackend.Application.DTOs.Common;
+using MobileBackend.Application.Common.Constants;
+using MobileBackend.Application.Common.Handlers;
 using MobileBackend.Application.DTOs.Items;
 using MobileBackend.Application.Interfaces;
+using MobileBackend.Domain.Entities;
 
 namespace MobileBackend.Application.Features.Items.Queries.GetItemById;
 
 /// <summary>
 /// Handler for getting an item by ID (with color included)
+/// Uses BaseGetByIdHandler to eliminate code duplication
 /// </summary>
-public class GetItemByIdQueryHandler : IRequestHandler<GetItemByIdQuery, Result<ItemDto>>
+public class GetItemByIdQueryHandler : BaseGetByIdHandler<GetItemByIdQuery, Item, ItemDto>
 {
     private readonly IUnitOfWork _unitOfWork;
-    private readonly ILogger<GetItemByIdQueryHandler> _logger;
 
     public GetItemByIdQueryHandler(
         IUnitOfWork unitOfWork,
         ILogger<GetItemByIdQueryHandler> logger)
+        : base(logger)
     {
         _unitOfWork = unitOfWork;
-        _logger = logger;
     }
 
-    public async Task<Result<ItemDto>> Handle(GetItemByIdQuery request, CancellationToken cancellationToken)
+    protected override async Task<Item?> GetEntityByIdAsync(Guid id, CancellationToken cancellationToken)
     {
-        try
-        {
-            // Use optimized method that includes color ?
-            var item = await _unitOfWork.Items.GetByIdWithColorAsync(request.ItemId, cancellationToken);
-
-            if (item == null)
-            {
-                return Result<ItemDto>.FailureResult("Item not found", 404);
-            }
-
-            var itemDto = new ItemDto
-            {
-                Id = item.Id,
-                Name = item.Name,
-                Description = item.Description,
-                SKU = item.SKU,
-                BasePrice = item.BasePrice,
-                Quantity = item.Quantity,
-                ColorId = item.ColorId,
-                ColorName = item.Color?.Name,  // ? Now works correctly!
-                ImageUrl = item.ImageUrl,
-                CreatedAt = item.CreatedAt,
-                UpdatedAt = item.UpdatedAt
-            };
-
-            _logger.LogInformation("Retrieved item: {ItemId} - {ItemName}", item.Id, item.Name);
-
-            return Result<ItemDto>.SuccessResult(itemDto);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error retrieving item: {ItemId}", request.ItemId);
-            return Result<ItemDto>.FailureResult("An error occurred while retrieving the item", 500);
-        }
+        // Use optimized method that includes color ?
+        return await _unitOfWork.Items.GetByIdWithColorAsync(id, cancellationToken);
     }
+
+    protected override ItemDto MapToDto(Item entity)
+    {
+        return new ItemDto
+        {
+            Id = entity.Id,
+            Name = entity.Name,
+            Description = entity.Description,
+            SKU = entity.SKU,
+            BasePrice = entity.BasePrice,
+            Quantity = entity.Quantity,
+            ColorId = entity.ColorId,
+            ColorName = entity.Color?.Name,  // ? Now works correctly!
+            ImageUrl = entity.ImageUrl,
+            CreatedAt = entity.CreatedAt,
+            UpdatedAt = entity.UpdatedAt
+        };
+    }
+
+    protected override string GetEntityName() => EntityNames.Item;
 }

@@ -19,10 +19,12 @@ public class ApplicationDbContext : DbContext
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
     public DbSet<Color> Colors => Set<Color>();
     public DbSet<Location> Locations => Set<Location>();
+    public DbSet<Inventory> Inventories => Set<Inventory>();
     public DbSet<Item> Items => Set<Item>();
     public DbSet<Order> Orders => Set<Order>();
     public DbSet<OrderItem> OrderItems => Set<OrderItem>();
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
+    public DbSet<ItemInventory> ItemInventories => Set<ItemInventory>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using MobileBackend.API.Controllers.Base;
 using MobileBackend.Application.DTOs.Common;
 using MobileBackend.Application.DTOs.Orders;
 using MobileBackend.Application.Features.Orders.Commands.CancelOrder;
@@ -21,15 +22,11 @@ namespace MobileBackend.API.Controllers;
 [Route("api/[controller]")]
 [Authorize]
 [Produces("application/json")]
-public class OrdersController : ControllerBase
+public class OrdersController : BaseApiController
 {
-    private readonly IMediator _mediator;
-    private readonly ILogger<OrdersController> _logger;
-
     public OrdersController(IMediator mediator, ILogger<OrdersController> logger)
+        : base(mediator, logger)
     {
-        _mediator = mediator;
-        _logger = logger;
     }
 
     /// <summary>
@@ -48,22 +45,11 @@ public class OrdersController : ControllerBase
             PageNumber = pageNumber,
             PageSize = pageSize
         };
-        var result = await _mediator.Send(query);
+        var result = await Mediator.Send(query);
 
-        if (!result.Success)
-        {
-            return StatusCode(result.StatusCode, new
-            {
-                success = false,
-                message = result.ErrorMessage
-            });
-        }
-
-        return Ok(new
-        {
-            success = true,
-            data = result.Data
-        });
+        return result.Success 
+            ? OkResponse(result.Data) 
+            : ErrorResponse(result);
     }
 
     /// <summary>
@@ -78,22 +64,11 @@ public class OrdersController : ControllerBase
     public async Task<IActionResult> GetById(Guid id)
     {
         var query = new GetOrderByIdQuery { OrderId = id };
-        var result = await _mediator.Send(query);
+        var result = await Mediator.Send(query);
 
-        if (!result.Success)
-        {
-            return StatusCode(result.StatusCode, new
-            {
-                success = false,
-                message = result.ErrorMessage
-            });
-        }
-
-        return Ok(new
-        {
-            success = true,
-            data = result.Data
-        });
+        return result.Success 
+            ? OkResponse(result.Data) 
+            : ErrorResponse(result);
     }
 
     /// <summary>
@@ -116,24 +91,11 @@ public class OrdersController : ControllerBase
             OrderItems = dto.OrderItems ?? new List<OrderItemDto>()
         };
 
-        var result = await _mediator.Send(command);
+        var result = await Mediator.Send(command);
 
-        if (!result.Success)
-        {
-            return StatusCode(result.StatusCode, new
-            {
-                success = false,
-                message = result.ErrorMessage,
-                errors = result.ValidationErrors
-            });
-        }
-
-        return StatusCode(StatusCodes.Status201Created, new
-        {
-            success = true,
-            message = "Order created successfully",
-            orderId = result.Data
-        });
+        return result.Success 
+            ? CreatedResponse(result.Data, "Order") 
+            : ErrorResponse(result);
     }
 
     /// <summary>
@@ -149,22 +111,11 @@ public class OrdersController : ControllerBase
     public async Task<IActionResult> Confirm(Guid id)
     {
         var command = new ConfirmOrderCommand { OrderId = id };
-        var result = await _mediator.Send(command);
+        var result = await Mediator.Send(command);
 
-        if (!result.Success)
-        {
-            return StatusCode(result.StatusCode, new
-            {
-                success = false,
-                message = result.ErrorMessage
-            });
-        }
-
-        return Ok(new
-        {
-            success = true,
-            message = "Order confirmed successfully"
-        });
+        return result.Success 
+            ? OkResponse("Order confirmed successfully") 
+            : ErrorResponse(result);
     }
 
     /// <summary>
@@ -185,22 +136,11 @@ public class OrdersController : ControllerBase
             OrderId = id,
             CancellationReason = reason
         };
-        var result = await _mediator.Send(command);
+        var result = await Mediator.Send(command);
 
-        if (!result.Success)
-        {
-            return StatusCode(result.StatusCode, new
-            {
-                success = false,
-                message = result.ErrorMessage
-            });
-        }
-
-        return Ok(new
-        {
-            success = true,
-            message = "Order cancelled successfully"
-        });
+        return result.Success 
+            ? OkResponse("Order cancelled successfully") 
+            : ErrorResponse(result);
     }
 
     /// <summary>
@@ -219,12 +159,15 @@ public class OrdersController : ControllerBase
         {
             SerialNumber = serialNumber,
             RefundQuantity = request.RefundQuantity,
-            RefundReason = request.RefundReason
+            RefundReason = request.RefundReason,
+            RefundToInventoryId = request.RefundToInventoryId
         };
 
-        var result = await _mediator.Send(command);
+        var result = await Mediator.Send(command);
 
-        return result.Success ? Ok(result) : StatusCode(result.StatusCode, result);
+        return result.Success 
+            ? OkResponse("Order item refunded successfully") 
+            : StatusCode(result.StatusCode, new { success = false, message = result.ErrorMessage });
     }
 }
 
@@ -242,4 +185,9 @@ public class RefundOrderItemRequest
     /// Optional reason for the refund
     /// </summary>
     public string? RefundReason { get; set; }
+    
+    /// <summary>
+    /// Inventory ID (warehouse) where the refunded items should be returned to
+    /// </summary>
+    public Guid RefundToInventoryId { get; set; }
 }

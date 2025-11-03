@@ -11,12 +11,14 @@ public interface IUnitOfWork : IDisposable
     IRoleRepository Roles { get; }
     IPermissionRepository Permissions { get; }
     IOrderRepository Orders { get; }
-    IOrderItemRepository OrderItems { get; }  // Added
+    IOrderItemRepository OrderItems { get; }
     IItemRepository Items { get; }
     IColorRepository Colors { get; }
     ILocationRepository Locations { get; }
     IAuditLogRepository AuditLogs { get; }
     IRefreshTokenRepository RefreshTokens { get; }
+    IItemInventoryRepository ItemInventories { get; }
+    IInventoryRepository Inventories { get; } // NEW
 
     // Transaction management
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);

@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using MobileBackend.API.Controllers.Base;
 using MobileBackend.Application.DTOs.Items;
 using MobileBackend.Application.Features.Items.Commands.CreateItem;
 using MobileBackend.Application.Features.Items.Commands.DeleteItem;
@@ -16,17 +17,11 @@ namespace MobileBackend.API.Controllers;
 /// </summary>
 [ApiController]
 [Route("api/[controller]")]
-[Authorize]
-[Produces("application/json")]
-public class ItemsController : ControllerBase
+public class ItemsController : BaseApiController
 {
-    private readonly IMediator _mediator;
-    private readonly ILogger<ItemsController> _logger;
-
     public ItemsController(IMediator mediator, ILogger<ItemsController> logger)
+        : base(mediator, logger)
     {
-        _mediator = mediator;
-        _logger = logger;
     }
 
     /// <summary>
@@ -45,22 +40,11 @@ public class ItemsController : ControllerBase
             PageNumber = pageNumber,
             PageSize = pageSize
         };
-        var result = await _mediator.Send(query);
+        var result = await Mediator.Send(query);
 
-        if (!result.Success)
-        {
-            return StatusCode(result.StatusCode, new
-            {
-                success = false,
-                message = result.ErrorMessage
-            });
-        }
-
-        return Ok(new
-        {
-            success = true,
-            data = result.Data
-        });
+        return result.Success 
+            ? OkResponse(result.Data) 
+            : ErrorResponse(result);
     }
 
     /// <summary>
@@ -75,22 +59,11 @@ public class ItemsController : ControllerBase
     public async Task<IActionResult> GetById(Guid id)
     {
         var query = new GetItemByIdQuery { ItemId = id };
-        var result = await _mediator.Send(query);
+        var result = await Mediator.Send(query);
 
-        if (!result.Success)
-        {
-            return StatusCode(result.StatusCode, new
-            {
-                success = false,
-                message = result.ErrorMessage
-            });
-        }
-
-        return Ok(new
-        {
-            success = true,
-            data = result.Data
-        });
+        return result.Success 
+            ? OkResponse(result.Data) 
+            : ErrorResponse(result);
     }
 
     /// <summary>
@@ -115,24 +88,11 @@ public class ItemsController : ControllerBase
             ImageUrl = dto.ImageUrl
         };
 
-        var result = await _mediator.Send(command);
+        var result = await Mediator.Send(command);
 
-        if (!result.Success)
-        {
-            return StatusCode(result.StatusCode, new
-            {
-                success = false,
-                message = result.ErrorMessage,
-                errors = result.ValidationErrors
-            });
-        }
-
-        return StatusCode(StatusCodes.Status201Created, new
-        {
-            success = true,
-            message = "Item created successfully",
-            itemId = result.Data
-        });
+        return result.Success 
+            ? CreatedResponse(result.Data, "Item") 
+            : ErrorResponse(result);
     }
 
     /// <summary>
@@ -160,22 +120,11 @@ public class ItemsController : ControllerBase
             ImageUrl = dto.ImageUrl
         };
 
-        var result = await _mediator.Send(command);
+        var result = await Mediator.Send(command);
 
-        if (!result.Success)
-        {
-            return StatusCode(result.StatusCode, new
-            {
-                success = false,
-                message = result.ErrorMessage
-            });
-        }
-
-        return Ok(new
-        {
-            success = true,
-            message = "Item updated successfully"
-        });
+        return result.Success 
+            ? OkResponse("Item updated successfully") 
+            : ErrorResponse(result);
     }
 
     /// <summary>
@@ -191,21 +140,10 @@ public class ItemsController : ControllerBase
     public async Task<IActionResult> Delete(Guid id)
     {
         var command = new DeleteItemCommand { ItemId = id };
-        var result = await _mediator.Send(command);
+        var result = await Mediator.Send(command);
 
-        if (!result.Success)
-        {
-            return StatusCode(result.StatusCode, new
-            {
-                success = false,
-                message = result.ErrorMessage
-            });
-        }
-
-        return Ok(new
-        {
-            success = true,
-            message = "Item deleted successfully"
-        });
+        return result.Success 
+            ? OkResponse("Item deleted successfully") 
+            : ErrorResponse(result);
     }
 }

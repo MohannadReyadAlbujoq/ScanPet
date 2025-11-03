@@ -1,56 +1,57 @@
-using MediatR;
 using Microsoft.Extensions.Logging;
+using MobileBackend.Application.Common.Constants;
+using MobileBackend.Application.Common.Handlers;
 using MobileBackend.Application.DTOs.Colors;
-using MobileBackend.Application.DTOs.Common;
 using MobileBackend.Application.Interfaces;
+using MobileBackend.Domain.Entities;
 
 namespace MobileBackend.Application.Features.Colors.Queries.GetAllColors;
 
 /// <summary>
 /// Handler for getting all colors (with accurate item counts - no N+1)
+/// Uses BaseGetAllHandler pattern while maintaining optimized SQL aggregation
 /// </summary>
-public class GetAllColorsQueryHandler : IRequestHandler<GetAllColorsQuery, Result<List<ColorDto>>>
+public class GetAllColorsQueryHandler : BaseGetAllHandler<GetAllColorsQuery, Color, ColorDto>
 {
     private readonly IUnitOfWork _unitOfWork;
-    private readonly ILogger<GetAllColorsQueryHandler> _logger;
+    private Dictionary<Guid, int> _itemCounts = new();
 
     public GetAllColorsQueryHandler(
         IUnitOfWork unitOfWork,
         ILogger<GetAllColorsQueryHandler> logger)
+        : base(logger)
     {
         _unitOfWork = unitOfWork;
-        _logger = logger;
     }
 
-    public async Task<Result<List<ColorDto>>> Handle(GetAllColorsQuery request, CancellationToken cancellationToken)
+    protected override async Task<List<Color>> GetEntitiesAsync(GetAllColorsQuery request, CancellationToken cancellationToken)
     {
-        try
-        {
-            // Use optimized method with SQL aggregation ?
-            var colorsWithCounts = await _unitOfWork.Colors.GetAllWithItemCountsAsync(cancellationToken);
-
-            var colorDtos = colorsWithCounts.Select(tuple => new ColorDto
-            {
-                Id = tuple.Color.Id,
-                Name = tuple.Color.Name,
-                Description = tuple.Color.Description,
-                RedValue = tuple.Color.RedValue,
-                GreenValue = tuple.Color.GreenValue,
-                BlueValue = tuple.Color.BlueValue,
-                HexCode = tuple.Color.HexCode,
-                ItemCount = tuple.ItemCount,  // ? Accurate count!
-                CreatedAt = tuple.Color.CreatedAt,
-                UpdatedAt = tuple.Color.UpdatedAt
-            }).ToList();
-
-            _logger.LogInformation("Retrieved {Count} colors", colorDtos.Count);
-
-            return Result<List<ColorDto>>.SuccessResult(colorDtos);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error retrieving colors");
-            return Result<List<ColorDto>>.FailureResult("An error occurred while retrieving colors", 500);
-        }
+        // Use optimized method with SQL aggregation ?
+        var colorsWithCounts = await _unitOfWork.Colors.GetAllWithItemCountsAsync(cancellationToken);
+        
+        // Store item counts in instance variable for use in MapToDto
+        _itemCounts = colorsWithCounts.ToDictionary(t => t.Color.Id, t => t.ItemCount);
+        
+        // Return just the colors
+        return colorsWithCounts.Select(t => t.Color).ToList();
     }
+
+    protected override ColorDto MapToDto(Color entity)
+    {
+        return new ColorDto
+        {
+            Id = entity.Id,
+            Name = entity.Name,
+            Description = entity.Description,
+            RedValue = entity.RedValue,
+            GreenValue = entity.GreenValue,
+            BlueValue = entity.BlueValue,
+            HexCode = entity.HexCode,
+            ItemCount = _itemCounts.TryGetValue(entity.Id, out var count) ? count : 0, // ? Accurate count from SQL!
+            CreatedAt = entity.CreatedAt,
+            UpdatedAt = entity.UpdatedAt
+        };
+    }
+
+    protected override string GetEntityName() => EntityNames.Color;
 }

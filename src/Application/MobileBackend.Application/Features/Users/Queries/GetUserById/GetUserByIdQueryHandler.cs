@@ -1,44 +1,49 @@
-using MediatR;
-using MobileBackend.Application.DTOs.Common;
+using Microsoft.Extensions.Logging;
+using MobileBackend.Application.Common.Constants;
+using MobileBackend.Application.Common.Handlers;
 using MobileBackend.Application.DTOs.Users;
 using MobileBackend.Application.Interfaces;
+using MobileBackend.Domain.Entities;
 
 namespace MobileBackend.Application.Features.Users.Queries.GetUserById;
 
 /// <summary>
 /// Handler for GetUserByIdQuery
+/// Uses BaseGetByIdHandler to eliminate code duplication
 /// </summary>
-public class GetUserByIdQueryHandler : IRequestHandler<GetUserByIdQuery, Result<UserDto>>
+public class GetUserByIdQueryHandler : BaseGetByIdHandler<GetUserByIdQuery, User, UserDto>
 {
     private readonly IUnitOfWork _unitOfWork;
 
-    public GetUserByIdQueryHandler(IUnitOfWork unitOfWork)
+    public GetUserByIdQueryHandler(
+        IUnitOfWork unitOfWork,
+        ILogger<GetUserByIdQueryHandler> logger)
+        : base(logger)
     {
         _unitOfWork = unitOfWork;
     }
 
-    public async Task<Result<UserDto>> Handle(GetUserByIdQuery request, CancellationToken cancellationToken)
+    protected override async Task<User?> GetEntityByIdAsync(Guid id, CancellationToken cancellationToken)
     {
-        var user = await _unitOfWork.Users.GetByIdWithRolesAsync(request.UserId, cancellationToken);
-        if (user == null)
-        {
-            return Result<UserDto>.FailureResult("User not found", 404);
-        }
-
-        var userDto = new UserDto
-        {
-            Id = user.Id,
-            Username = user.Username,
-            Email = user.Email,
-            FullName = user.FullName,
-            PhoneNumber = user.PhoneNumber,
-            IsEnabled = user.IsEnabled,
-            IsApproved = user.IsApproved,
-            Roles = user.UserRoles.Select(ur => ur.Role.Name).ToList(),
-            CreatedAt = user.CreatedAt,
-            UpdatedAt = user.UpdatedAt
-        };
-
-        return Result<UserDto>.SuccessResult(userDto);
+        return await _unitOfWork.Users.GetByIdWithRolesAsync(id, cancellationToken);
     }
+
+    protected override UserDto MapToDto(User entity)
+    {
+        return new UserDto
+        {
+            Id = entity.Id,
+            Username = entity.Username,
+            Email = entity.Email,
+            FullName = entity.FullName,
+            PhoneNumber = entity.PhoneNumber,
+            IsEnabled = entity.IsEnabled,
+            IsApproved = entity.IsApproved,
+            Roles = entity.UserRoles.Select(ur => ur.Role.Name).ToList(),
+            CreatedAt = entity.CreatedAt,
+            UpdatedAt = entity.UpdatedAt
+        };
+    }
+
+    protected override string GetEntityName() => EntityNames.User;
 }

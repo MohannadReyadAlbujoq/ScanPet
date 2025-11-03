@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using MobileBackend.API.Controllers.Base;
 using MobileBackend.Application.DTOs.Locations;
 using MobileBackend.Application.Features.Locations.Commands.CreateLocation;
 using MobileBackend.Application.Features.Locations.Commands.DeleteLocation;
@@ -16,17 +17,11 @@ namespace MobileBackend.API.Controllers;
 /// </summary>
 [ApiController]
 [Route("api/[controller]")]
-[Authorize]
-[Produces("application/json")]
-public class LocationsController : ControllerBase
+public class LocationsController : BaseApiController
 {
-    private readonly IMediator _mediator;
-    private readonly ILogger<LocationsController> _logger;
-
     public LocationsController(IMediator mediator, ILogger<LocationsController> logger)
+        : base(mediator, logger)
     {
-        _mediator = mediator;
-        _logger = logger;
     }
 
     /// <summary>
@@ -39,22 +34,11 @@ public class LocationsController : ControllerBase
     public async Task<IActionResult> GetAll()
     {
         var query = new GetAllLocationsQuery();
-        var result = await _mediator.Send(query);
+        var result = await Mediator.Send(query);
 
-        if (!result.Success)
-        {
-            return StatusCode(result.StatusCode, new
-            {
-                success = false,
-                message = result.ErrorMessage
-            });
-        }
-
-        return Ok(new
-        {
-            success = true,
-            data = result.Data
-        });
+        return result.Success 
+            ? OkResponse(result.Data) 
+            : ErrorResponse(result);
     }
 
     /// <summary>
@@ -69,22 +53,11 @@ public class LocationsController : ControllerBase
     public async Task<IActionResult> GetById(Guid id)
     {
         var query = new GetLocationByIdQuery { LocationId = id };
-        var result = await _mediator.Send(query);
+        var result = await Mediator.Send(query);
 
-        if (!result.Success)
-        {
-            return StatusCode(result.StatusCode, new
-            {
-                success = false,
-                message = result.ErrorMessage
-            });
-        }
-
-        return Ok(new
-        {
-            success = true,
-            data = result.Data
-        });
+        return result.Success 
+            ? OkResponse(result.Data) 
+            : ErrorResponse(result);
     }
 
     /// <summary>
@@ -108,24 +81,11 @@ public class LocationsController : ControllerBase
             IsActive = dto.IsActive ?? true
         };
 
-        var result = await _mediator.Send(command);
+        var result = await Mediator.Send(command);
 
-        if (!result.Success)
-        {
-            return StatusCode(result.StatusCode, new
-            {
-                success = false,
-                message = result.ErrorMessage,
-                errors = result.ValidationErrors
-            });
-        }
-
-        return StatusCode(StatusCodes.Status201Created, new
-        {
-            success = true,
-            message = "Location created successfully",
-            locationId = result.Data
-        });
+        return result.Success 
+            ? CreatedResponse(result.Data, "Location") 
+            : ErrorResponse(result);
     }
 
     /// <summary>
@@ -152,22 +112,11 @@ public class LocationsController : ControllerBase
             IsActive = dto.IsActive ?? true
         };
 
-        var result = await _mediator.Send(command);
+        var result = await Mediator.Send(command);
 
-        if (!result.Success)
-        {
-            return StatusCode(result.StatusCode, new
-            {
-                success = false,
-                message = result.ErrorMessage
-            });
-        }
-
-        return Ok(new
-        {
-            success = true,
-            message = "Location updated successfully"
-        });
+        return result.Success 
+            ? OkResponse("Location updated successfully") 
+            : ErrorResponse(result);
     }
 
     /// <summary>
@@ -183,21 +132,10 @@ public class LocationsController : ControllerBase
     public async Task<IActionResult> Delete(Guid id)
     {
         var command = new DeleteLocationCommand { LocationId = id };
-        var result = await _mediator.Send(command);
+        var result = await Mediator.Send(command);
 
-        if (!result.Success)
-        {
-            return StatusCode(result.StatusCode, new
-            {
-                success = false,
-                message = result.ErrorMessage
-            });
-        }
-
-        return Ok(new
-        {
-            success = true,
-            message = "Location deleted successfully"
-        });
+        return result.Success 
+            ? OkResponse("Location deleted successfully") 
+            : ErrorResponse(result);
     }
 }

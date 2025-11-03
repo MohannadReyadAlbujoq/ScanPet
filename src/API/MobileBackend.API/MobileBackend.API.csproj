@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk.Web">
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
@@ -22,10 +22,6 @@
     <ProjectReference Include="..\..\Application\MobileBackend.Application\MobileBackend.Application.csproj" />
     <ProjectReference Include="..\..\Infrastructure\MobileBackend.Infrastructure\MobileBackend.Infrastructure.csproj" />
     <ProjectReference Include="..\..\Framework\MobileBackend.Framework\MobileBackend.Framework.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="Controllers\Base\" />
   </ItemGroup>
 
   <ItemGroup>

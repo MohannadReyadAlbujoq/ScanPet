@@ -10,6 +10,7 @@ namespace MobileBackend.Application.Features.Orders.Commands.RefundOrderItem;
 
 /// <summary>
 /// Handler for refunding an order item by serial number
+/// NEW: Uses Inventory system for proper warehouse tracking
 /// </summary>
 public class RefundOrderItemCommandHandler : IRequestHandler<RefundOrderItemCommand, Result>
 {
@@ -34,6 +35,12 @@ public class RefundOrderItemCommandHandler : IRequestHandler<RefundOrderItemComm
     {
         try
         {
+            // Validate refund quantity first
+            if (request.RefundQuantity <= 0)
+            {
+                return Result.FailureResult("Refund quantity must be greater than 0", 400);
+            }
+
             // Find order item by serial number
             var orderItem = await _unitOfWork.OrderItems.GetBySerialNumberAsync(request.SerialNumber, cancellationToken);
             if (orderItem == null)
@@ -54,21 +61,50 @@ public class RefundOrderItemCommandHandler : IRequestHandler<RefundOrderItemComm
             }
 
             // Validate refund quantity
-            if (request.RefundQuantity <= 0)
-            {
-                return Result.FailureResult("Refund quantity must be greater than 0", 400);
-            }
-
             if (request.RefundQuantity > orderItem.Quantity)
             {
-                return Result.FailureResult($"Refund quantity ({request.RefundQuantity}) cannot exceed ordered quantity ({orderItem.Quantity})", 400);
+                return Result.FailureResult(
+                    $"Refund quantity ({request.RefundQuantity}) cannot exceed ordered quantity ({orderItem.Quantity})", 
+                    400);
             }
 
-            // Get the related item to restore inventory
+            // Validate inventory exists
+            var inventory = await _unitOfWork.Inventories.GetByIdAsync(request.RefundToInventoryId, cancellationToken);
+            if (inventory == null)
+            {
+                return Result.FailureResult(
+                    $"Inventory with ID {request.RefundToInventoryId} not found", 
+                    404);
+            }
+
+            // Check if inventory is active
+            if (!inventory.IsActive)
+            {
+                return Result.FailureResult(
+                    $"Cannot refund to inactive inventory: {inventory.Name}", 
+                    400);
+            }
+
+            // Get the related item to verify it exists
             var item = await _unitOfWork.Items.GetByIdAsync(orderItem.ItemId, cancellationToken);
             if (item == null)
             {
                 return Result.FailureResult("Related item not found in inventory", 404);
+            }
+
+            // NEW: Restore inventory to specific warehouse using ItemInventory
+            var adjustSuccess = await _unitOfWork.ItemInventories.AdjustInventoryAsync(
+                itemId: orderItem.ItemId,
+                inventoryId: request.RefundToInventoryId,
+                quantityChange: request.RefundQuantity, // Positive = add back to inventory
+                cancellationToken: cancellationToken
+            );
+
+            if (!adjustSuccess)
+            {
+                return Result.FailureResult(
+                    "Failed to restore inventory. Please contact support.", 
+                    500);
             }
 
             // Update order item status to refunded
@@ -77,19 +113,14 @@ public class RefundOrderItemCommandHandler : IRequestHandler<RefundOrderItemComm
             orderItem.RefundedAt = DateTime.UtcNow;
             orderItem.RefundedBy = _currentUserService.UserId;
             orderItem.RefundReason = request.RefundReason;
+            orderItem.RefundedToInventoryId = request.RefundToInventoryId; // Track where it went
             orderItem.UpdatedAt = DateTime.UtcNow;
             orderItem.UpdatedBy = _currentUserService.UserId;
 
-            // Restore inventory quantity
-            item.Quantity += request.RefundQuantity;
-            item.UpdatedAt = DateTime.UtcNow;
-            item.UpdatedBy = _currentUserService.UserId;
-
-            // Update entities
+            // Update order item
             _unitOfWork.OrderItems.Update(orderItem);
-            _unitOfWork.Items.Update(item);
 
-            // Save changes
+            // Save all changes in transaction
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
             // Audit log for order item refund
@@ -98,25 +129,34 @@ public class RefundOrderItemCommandHandler : IRequestHandler<RefundOrderItemComm
                 entityName: EntityNames.OrderItem,
                 entityId: orderItem.Id,
                 userId: _currentUserService.UserId ?? Guid.Empty,
-                additionalInfo: $"Refunded order item {request.SerialNumber}, Quantity: {request.RefundQuantity}, Reason: {request.RefundReason ?? "Not specified"}",
+                additionalInfo: $"Refunded order item {request.SerialNumber}, " +
+                               $"Quantity: {request.RefundQuantity}, " +
+                               $"To Inventory: {inventory.Name} ({inventory.Id}), " +
+                               $"Reason: {request.RefundReason ?? "Not specified"}",
                 cancellationToken: cancellationToken
             );
 
             // Audit log for inventory restoration
             await _auditService.LogAsync(
                 action: AuditActions.ItemUpdated,
-                entityName: EntityNames.Item,
-                entityId: item.Id,
+                entityName: "ItemInventory",
+                entityId: orderItem.ItemId,
                 userId: _currentUserService.UserId ?? Guid.Empty,
-                additionalInfo: $"Inventory restored +{request.RefundQuantity} for item {item.Name} (SKU: {item.SKU}) due to refund of {request.SerialNumber}",
+                additionalInfo: $"Inventory restored +{request.RefundQuantity} for item {item.Name} (SKU: {item.SKU}) " +
+                               $"to warehouse {inventory.Name} due to refund of {request.SerialNumber}",
                 cancellationToken: cancellationToken
             );
 
             _logger.LogInformation(
-                "Order item {SerialNumber} refunded successfully. Quantity: {RefundQuantity}, Item: {ItemId}, Inventory restored: {RestoredQuantity}",
+                "Order item {SerialNumber} refunded successfully. " +
+                "Quantity: {RefundQuantity}, Item: {ItemId}, " +
+                "Inventory: {InventoryName} ({InventoryId}), " +
+                "Restored: {RestoredQuantity}",
                 request.SerialNumber,
                 request.RefundQuantity,
                 item.Id,
+                inventory.Name,
+                inventory.Id,
                 request.RefundQuantity
             );
 

@@ -16,6 +16,12 @@ public class OrderItem : BaseEntity, ISoftDelete
     public Guid? RefundedBy { get; set; }
     public string? RefundReason { get; set; }
     
+    /// <summary>
+    /// Inventory ID where refunded items should be returned
+    /// Specifies which warehouse/inventory receives the refunded items
+    /// </summary>
+    public Guid? RefundedToInventoryId { get; set; }
+    
     // Soft Delete
     public bool IsDeleted { get; set; } = false;
     public DateTime? DeletedAt { get; set; }
@@ -24,4 +30,5 @@ public class OrderItem : BaseEntity, ISoftDelete
     // Navigation Properties
     public virtual Order Order { get; set; } = null!;
     public virtual Item Item { get; set; } = null!;
+    public virtual Inventory? RefundedToInventory { get; set; }
 }

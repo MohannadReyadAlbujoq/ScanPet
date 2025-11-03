@@ -2,6 +2,10 @@ using MobileBackend.Domain.Common;
 
 namespace MobileBackend.Domain.Entities;
 
+/// <summary>
+/// Represents order delivery/shipping locations
+/// Separate from Inventory which represents warehouses/storage
+/// </summary>
 public class Location : BaseEntity, ISoftDelete
 {
     public string Name { get; set; } = string.Empty;
@@ -17,5 +21,8 @@ public class Location : BaseEntity, ISoftDelete
     public Guid? DeletedBy { get; set; }
     
     // Navigation Properties
+    /// <summary>
+    /// Orders delivered to this location
+    /// </summary>
     public virtual ICollection<Order> Orders { get; set; } = new List<Order>();
 }

@@ -11,4 +11,9 @@ public class RefundOrderItemCommand : IRequest<Result>
     public string SerialNumber { get; set; } = string.Empty;
     public int RefundQuantity { get; set; }
     public string? RefundReason { get; set; }
+    
+    /// <summary>
+    /// Inventory ID (warehouse) where the refunded items should be returned to
+    /// </summary>
+    public Guid RefundToInventoryId { get; set; }
 }

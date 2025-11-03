@@ -1,5 +1,6 @@
-using MediatR;
+using Microsoft.Extensions.Logging;
 using MobileBackend.Application.Common.Constants;
+using MobileBackend.Application.Common.Handlers;
 using MobileBackend.Application.Common.Interfaces;
 using MobileBackend.Application.DTOs.Common;
 using MobileBackend.Application.Interfaces;
@@ -9,76 +10,77 @@ namespace MobileBackend.Application.Features.Users.Commands.CreateUser;
 
 /// <summary>
 /// Handler for CreateUserCommand
-/// Creates a new user account (admin only)
+/// Uses BaseCreateHandler to eliminate code duplication
+/// Password hashing is handled in CreateEntityAsync
 /// </summary>
-public class CreateUserCommandHandler : IRequestHandler<CreateUserCommand, Result<Guid>>
+public class CreateUserCommandHandler : BaseCreateHandler<CreateUserCommand, User>
 {
-    private readonly IUnitOfWork _unitOfWork;
     private readonly IPasswordService _passwordService;
-    private readonly IAuditService _auditService;
-    private readonly ICurrentUserService _currentUserService;
-    private readonly IDateTimeService _dateTimeService;
 
     public CreateUserCommandHandler(
         IUnitOfWork unitOfWork,
         IPasswordService passwordService,
         IAuditService auditService,
         ICurrentUserService currentUserService,
-        IDateTimeService dateTimeService)
+        IDateTimeService dateTimeService,
+        ILogger<CreateUserCommandHandler> logger)
+        : base(unitOfWork, auditService, currentUserService, dateTimeService, logger)
     {
-        _unitOfWork = unitOfWork;
         _passwordService = passwordService;
-        _auditService = auditService;
-        _currentUserService = currentUserService;
-        _dateTimeService = dateTimeService;
     }
 
-    public async Task<Result<Guid>> Handle(CreateUserCommand request, CancellationToken cancellationToken)
+    protected override async Task<User> CreateEntityAsync(
+        CreateUserCommand command,
+        CancellationToken cancellationToken)
+    {
+        // Hash password
+        var passwordHash = _passwordService.HashPassword(command.Password);
+
+        return new User
+        {
+            Id = Guid.NewGuid(),
+            Username = command.Username,
+            Email = command.Email,
+            PasswordHash = passwordHash,
+            FullName = command.FullName,
+            PhoneNumber = command.PhoneNumber,
+            IsEnabled = false, // Disabled by default
+            IsApproved = false, // Not approved by default
+            IsDeleted = false
+        };
+    }
+
+    protected override Task AddEntityAsync(User entity, CancellationToken cancellationToken)
+    {
+        return UnitOfWork.Users.AddAsync(entity, cancellationToken);
+    }
+
+    protected override string GetEntityName() => EntityNames.User;
+
+    protected override string GetAuditAction() => AuditActions.UserCreated;
+
+    protected override string GetAuditMessage(User entity)
+        => $"User created: {entity.Username}";
+
+    // Override uniqueness validation to check both username and email
+    protected override async Task<Result<Guid>> ValidateUniquenessAsync(
+        CreateUserCommand command,
+        CancellationToken cancellationToken)
     {
         // Check if username already exists
-        var existingUser = await _unitOfWork.Users.GetByUsernameAsync(request.Username, cancellationToken);
+        var existingUser = await UnitOfWork.Users.GetByUsernameAsync(command.Username, cancellationToken);
         if (existingUser != null)
         {
             return Result<Guid>.FailureResult("Username already exists", 400);
         }
 
         // Check if email already exists
-        var existingEmail = await _unitOfWork.Users.GetByEmailAsync(request.Email, cancellationToken);
+        var existingEmail = await UnitOfWork.Users.GetByEmailAsync(command.Email, cancellationToken);
         if (existingEmail != null)
         {
             return Result<Guid>.FailureResult("Email already exists", 400);
         }
 
-        // Hash password
-        var passwordHash = _passwordService.HashPassword(request.Password);
-
-        // Create new user
-        var user = new User
-        {
-            Id = Guid.NewGuid(),
-            Username = request.Username,
-            Email = request.Email,
-            PasswordHash = passwordHash,
-            FullName = request.FullName,
-            PhoneNumber = request.PhoneNumber,
-            IsEnabled = false, // Disabled by default
-            IsApproved = false, // Not approved by default
-            CreatedAt = _dateTimeService.UtcNow,
-            CreatedBy = _currentUserService.UserId ?? Guid.Empty
-        };
-
-        await _unitOfWork.Users.AddAsync(user, cancellationToken);
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
-
-        // Audit log
-        await _auditService.LogAsync(
-            AuditActions.UserCreated,
-            EntityNames.User,
-            user.Id,
-            _currentUserService.UserId ?? Guid.Empty,
-            $"User created: {user.Username}",
-            cancellationToken);
-
-        return Result<Guid>.SuccessResult(user.Id, 201);
+        return Result<Guid>.SuccessResult(Guid.Empty);
     }
 }

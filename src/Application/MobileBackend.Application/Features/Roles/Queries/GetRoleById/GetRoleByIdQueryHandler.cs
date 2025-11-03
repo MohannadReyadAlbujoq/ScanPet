@@ -1,32 +1,37 @@
-using MediatR;
-using MobileBackend.Application.DTOs.Common;
+using Microsoft.Extensions.Logging;
+using MobileBackend.Application.Common.Constants;
+using MobileBackend.Application.Common.Handlers;
 using MobileBackend.Application.DTOs.Roles;
 using MobileBackend.Application.Interfaces;
+using MobileBackend.Domain.Entities;
 using MobileBackend.Domain.Enums;
 
 namespace MobileBackend.Application.Features.Roles.Queries.GetRoleById;
 
 /// <summary>
 /// Handler for GetRoleByIdQuery
+/// Uses BaseGetByIdHandler to eliminate code duplication
 /// </summary>
-public class GetRoleByIdQueryHandler : IRequestHandler<GetRoleByIdQuery, Result<RoleDto>>
+public class GetRoleByIdQueryHandler : BaseGetByIdHandler<GetRoleByIdQuery, Role, RoleDto>
 {
     private readonly IUnitOfWork _unitOfWork;
 
-    public GetRoleByIdQueryHandler(IUnitOfWork unitOfWork)
+    public GetRoleByIdQueryHandler(
+        IUnitOfWork unitOfWork,
+        ILogger<GetRoleByIdQueryHandler> logger)
+        : base(logger)
     {
         _unitOfWork = unitOfWork;
     }
 
-    public async Task<Result<RoleDto>> Handle(GetRoleByIdQuery request, CancellationToken cancellationToken)
+    protected override async Task<Role?> GetEntityByIdAsync(Guid id, CancellationToken cancellationToken)
     {
-        var role = await _unitOfWork.Roles.GetByIdWithPermissionsAsync(request.RoleId, cancellationToken);
-        if (role == null)
-        {
-            return Result<RoleDto>.FailureResult("Role not found", 404);
-        }
+        return await _unitOfWork.Roles.GetByIdWithPermissionsAsync(id, cancellationToken);
+    }
 
-        var rolePermission = role.RolePermissions.FirstOrDefault();
+    protected override RoleDto MapToDto(Role entity)
+    {
+        var rolePermission = entity.RolePermissions.FirstOrDefault();
         var permissionsBitmask = rolePermission?.PermissionsBitmask ?? 0L;
         
         // Convert bitmask to permission names
@@ -39,17 +44,17 @@ public class GetRoleByIdQueryHandler : IRequestHandler<GetRoleByIdQuery, Result<
             }
         }
 
-        var roleDto = new RoleDto
+        return new RoleDto
         {
-            Id = role.Id,
-            Name = role.Name,
-            Description = role.Description,
+            Id = entity.Id,
+            Name = entity.Name,
+            Description = entity.Description,
             PermissionsBitmask = permissionsBitmask,
             Permissions = permissions,
-            UserCount = role.UserRoles.Count,
-            CreatedAt = role.CreatedAt
+            UserCount = entity.UserRoles.Count,
+            CreatedAt = entity.CreatedAt
         };
-
-        return Result<RoleDto>.SuccessResult(roleDto);
     }
+
+    protected override string GetEntityName() => EntityNames.Role;
 }

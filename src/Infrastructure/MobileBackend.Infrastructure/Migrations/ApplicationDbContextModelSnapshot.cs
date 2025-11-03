@@ -149,6 +149,72 @@ namespace MobileBackend.Infrastructure.Migrations
                     b.ToTable("Colors", (string)null);
                 });
 
+            modelBuilder.Entity("MobileBackend.Domain.Entities.Inventory", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("DeletedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true);
+
+                    b.Property<bool>("IsDeleted")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false);
+
+                    b.Property<string>("Location")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UpdatedBy")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedBy")
+                        .HasDatabaseName("IX_Inventories_CreatedBy");
+
+                    b.HasIndex("IsActive")
+                        .HasDatabaseName("IX_Inventories_IsActive")
+                        .HasFilter("\"IsDeleted\" = false");
+
+                    b.HasIndex("IsDeleted")
+                        .HasDatabaseName("IX_Inventories_IsDeleted");
+
+                    b.HasIndex("Name")
+                        .HasDatabaseName("IX_Inventories_Name")
+                        .HasFilter("\"IsDeleted\" = false");
+
+                    b.ToTable("Inventories", (string)null);
+                });
+
             modelBuilder.Entity("MobileBackend.Domain.Entities.Item", b =>
                 {
                     b.Property<Guid>("Id")
@@ -220,6 +286,78 @@ namespace MobileBackend.Infrastructure.Migrations
                         .HasFilter("\"IsDeleted\" = false AND \"SKU\" IS NOT NULL");
 
                     b.ToTable("Items", (string)null);
+                });
+
+            modelBuilder.Entity("MobileBackend.Domain.Entities.ItemInventory", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("DeletedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("InventoryId")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("IsDeleted")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false);
+
+                    b.Property<Guid>("ItemId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int?>("MaximumQuantity")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("MinimumQuantity")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<int>("Quantity")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0);
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UpdatedBy")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedBy")
+                        .HasDatabaseName("IX_ItemInventories_CreatedBy");
+
+                    b.HasIndex("InventoryId")
+                        .HasDatabaseName("IX_ItemInventories_InventoryId");
+
+                    b.HasIndex("IsDeleted")
+                        .HasDatabaseName("IX_ItemInventories_IsDeleted");
+
+                    b.HasIndex("ItemId")
+                        .HasDatabaseName("IX_ItemInventories_ItemId");
+
+                    b.HasIndex("ItemId", "InventoryId")
+                        .IsUnique()
+                        .HasDatabaseName("IX_ItemInventories_ItemId_InventoryId")
+                        .HasFilter("\"IsDeleted\" = false");
+
+                    b.ToTable("ItemInventories", (string)null);
                 });
 
             modelBuilder.Entity("MobileBackend.Domain.Entities.Location", b =>
@@ -422,6 +560,9 @@ namespace MobileBackend.Infrastructure.Migrations
                         .HasColumnType("integer")
                         .HasDefaultValue(0);
 
+                    b.Property<Guid?>("RefundedToInventoryId")
+                        .HasColumnType("uuid");
+
                     b.Property<decimal>("SalePrice")
                         .HasColumnType("decimal(18,2)");
 
@@ -454,6 +595,8 @@ namespace MobileBackend.Infrastructure.Migrations
                         .HasFilter("\"IsDeleted\" = false");
 
                     b.HasIndex("RefundedBy");
+
+                    b.HasIndex("RefundedToInventoryId");
 
                     b.HasIndex("SerialNumber")
                         .IsUnique()
@@ -834,6 +977,25 @@ namespace MobileBackend.Infrastructure.Migrations
                     b.Navigation("Color");
                 });
 
+            modelBuilder.Entity("MobileBackend.Domain.Entities.ItemInventory", b =>
+                {
+                    b.HasOne("MobileBackend.Domain.Entities.Inventory", "Inventory")
+                        .WithMany("ItemInventories")
+                        .HasForeignKey("InventoryId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("MobileBackend.Domain.Entities.Item", "Item")
+                        .WithMany("ItemInventories")
+                        .HasForeignKey("ItemId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Inventory");
+
+                    b.Navigation("Item");
+                });
+
             modelBuilder.Entity("MobileBackend.Domain.Entities.Location", b =>
                 {
                     b.HasOne("MobileBackend.Domain.Entities.User", null)
@@ -882,9 +1044,16 @@ namespace MobileBackend.Infrastructure.Migrations
                         .HasForeignKey("RefundedBy")
                         .OnDelete(DeleteBehavior.Restrict);
 
+                    b.HasOne("MobileBackend.Domain.Entities.Inventory", "RefundedToInventory")
+                        .WithMany()
+                        .HasForeignKey("RefundedToInventoryId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.Navigation("Item");
 
                     b.Navigation("Order");
+
+                    b.Navigation("RefundedToInventory");
                 });
 
             modelBuilder.Entity("MobileBackend.Domain.Entities.RefreshToken", b =>
@@ -964,8 +1133,15 @@ namespace MobileBackend.Infrastructure.Migrations
                     b.Navigation("Items");
                 });
 
+            modelBuilder.Entity("MobileBackend.Domain.Entities.Inventory", b =>
+                {
+                    b.Navigation("ItemInventories");
+                });
+
             modelBuilder.Entity("MobileBackend.Domain.Entities.Item", b =>
                 {
+                    b.Navigation("ItemInventories");
+
                     b.Navigation("OrderItems");
                 });
 
