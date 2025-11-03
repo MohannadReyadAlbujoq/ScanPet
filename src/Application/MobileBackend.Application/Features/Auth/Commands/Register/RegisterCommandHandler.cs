@@ -8,7 +8,7 @@ namespace MobileBackend.Application.Features.Auth.Commands.Register;
 
 /// <summary>
 /// Handler for user registration
-/// Creates new user in disabled and unapproved state
+/// Creates new user with default "User" role in disabled and unapproved state
 /// </summary>
 public class RegisterCommandHandler : IRequestHandler<RegisterCommand, Result<Guid>>
 {
@@ -44,10 +44,18 @@ public class RegisterCommandHandler : IRequestHandler<RegisterCommand, Result<Gu
                 return Result<Guid>.FailureResult("Email is already registered", 400);
             }
 
-            // 3. Hash password
+            // 3. Get default "User" role
+            var defaultRole = await _unitOfWork.Roles.GetRoleByNameAsync("User", cancellationToken);
+            if (defaultRole == null)
+            {
+                _logger.LogError("Registration failed: Default 'User' role not found in database");
+                return Result<Guid>.FailureResult("System configuration error. Please contact administrator.", 500);
+            }
+
+            // 4. Hash password
             var passwordHash = _passwordService.HashPassword(request.Password);
 
-            // 4. Create user entity
+            // 5. Create user entity
             var user = new User
             {
                 Id = Guid.NewGuid(),
@@ -62,13 +70,25 @@ public class RegisterCommandHandler : IRequestHandler<RegisterCommand, Result<Gu
                 UpdatedAt = DateTime.UtcNow
             };
 
-            // 5. Add user to database
+            // 6. Add user to database
             await _unitOfWork.Users.AddAsync(user, cancellationToken);
 
-            // 6. Save changes
+            // 7. Assign default "User" role
+            var userRole = new UserRole
+            {
+                Id = Guid.NewGuid(),
+                UserId = user.Id,
+                RoleId = defaultRole.Id,
+                AssignedAt = DateTime.UtcNow,
+                CreatedAt = DateTime.UtcNow
+            };
+
+            _unitOfWork.Users.AddUserRole(userRole);
+
+            // 8. Save changes
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-            // 7. Log registration in audit log
+            // 9. Log registration in audit log
             var auditLog = new AuditLog
             {
                 Id = Guid.NewGuid(),
@@ -77,17 +97,17 @@ public class RegisterCommandHandler : IRequestHandler<RegisterCommand, Result<Gu
                 EntityName = "User",
                 EntityId = user.Id,
                 OldValues = null,
-                NewValues = $"{{\"Username\":\"{user.Username}\",\"Email\":\"{user.Email}\",\"FullName\":\"{user.FullName}\"}}",
+                NewValues = $"{{\"Username\":\"{user.Username}\",\"Email\":\"{user.Email}\",\"FullName\":\"{user.FullName}\",\"Role\":\"User\"}}",
                 IpAddress = "Unknown", // Will be set by middleware
                 UserAgent = null,
                 Timestamp = DateTime.UtcNow,
-                AdditionalInfo = $"New user registered: {user.Username} - Pending approval"
+                AdditionalInfo = $"New user registered: {user.Username} with default 'User' role - Pending approval"
             };
 
             await _unitOfWork.AuditLogs.AddAsync(auditLog, cancellationToken);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-            _logger.LogInformation("User registered successfully - {Username}, UserId: {UserId}", user.Username, user.Id);
+            _logger.LogInformation("User registered successfully with default 'User' role - {Username}, UserId: {UserId}", user.Username, user.Id);
 
             return Result<Guid>.SuccessResult(user.Id, 201);
         }

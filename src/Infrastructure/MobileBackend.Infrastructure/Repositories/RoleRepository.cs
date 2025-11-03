@@ -17,6 +17,11 @@ public class RoleRepository : GenericRepository<Role>, IRoleRepository
             .FirstOrDefaultAsync(r => r.Name == name, cancellationToken);
     }
 
+    public async Task<Role?> GetRoleByNameAsync(string name, CancellationToken cancellationToken = default)
+    {
+        return await GetByNameAsync(name, cancellationToken);
+    }
+
     public async Task<Role?> GetByIdWithPermissionsAsync(Guid roleId, CancellationToken cancellationToken = default)
     {
         return await _dbSet

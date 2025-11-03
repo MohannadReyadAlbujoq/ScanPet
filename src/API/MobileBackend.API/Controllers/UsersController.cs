@@ -4,6 +4,8 @@ using Microsoft.AspNetCore.Mvc;
 using MobileBackend.Application.DTOs.Users;
 using MobileBackend.Application.Features.Users.Commands.ApproveUser;
 using MobileBackend.Application.Features.Users.Commands.CreateUser;
+using MobileBackend.Application.Features.Users.Commands.ToggleUserStatus;
+using MobileBackend.Application.Features.Users.Commands.UpdateUserRole;
 using MobileBackend.Application.Features.Users.Queries.GetAllUsers;
 using MobileBackend.Application.Features.Users.Queries.GetUserById;
 
@@ -189,6 +191,80 @@ public class UsersController : ControllerBase
         {
             success = true,
             message = $"User {(request.IsApproved ? "approved" : "rejected")} successfully"
+        });
+    }
+
+    /// <summary>
+    /// Update user's role
+    /// </summary>
+    /// <param name="id">User ID</param>
+    /// <param name="request">Role update details</param>
+    /// <returns>Success response</returns>
+    [HttpPut("{id}/role")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public async Task<IActionResult> UpdateRole(Guid id, [FromBody] UpdateUserRoleDto request)
+    {
+        var command = new UpdateUserRoleCommand
+        {
+            UserId = id,
+            RoleId = request.RoleId
+        };
+
+        var result = await _mediator.Send(command);
+
+        if (!result.Success)
+        {
+            return StatusCode(result.StatusCode, new
+            {
+                success = false,
+                message = result.ErrorMessage
+            });
+        }
+
+        return Ok(new
+        {
+            success = true,
+            message = "User role updated successfully"
+        });
+    }
+
+    /// <summary>
+    /// Enable or disable user account
+    /// </summary>
+    /// <param name="id">User ID</param>
+    /// <param name="request">Status update details</param>
+    /// <returns>Success response</returns>
+    [HttpPut("{id}/status")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public async Task<IActionResult> ToggleStatus(Guid id, [FromBody] ToggleUserStatusDto request)
+    {
+        var command = new ToggleUserStatusCommand
+        {
+            UserId = id,
+            IsEnabled = request.IsEnabled
+        };
+
+        var result = await _mediator.Send(command);
+
+        if (!result.Success)
+        {
+            return StatusCode(result.StatusCode, new
+            {
+                success = false,
+                message = result.ErrorMessage
+            });
+        }
+
+        return Ok(new
+        {
+            success = true,
+            message = $"User {(request.IsEnabled ? "enabled" : "disabled")} successfully"
         });
     }
 }

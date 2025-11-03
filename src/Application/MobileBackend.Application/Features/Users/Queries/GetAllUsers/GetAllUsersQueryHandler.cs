@@ -7,7 +7,7 @@ namespace MobileBackend.Application.Features.Users.Queries.GetAllUsers;
 
 /// <summary>
 /// Handler for GetAllUsersQuery
-/// Returns paginated list of users
+/// Returns paginated list of users with their roles
 /// </summary>
 public class GetAllUsersQueryHandler : IRequestHandler<GetAllUsersQuery, Result<PagedResult<UserDto>>>
 {
@@ -20,6 +20,7 @@ public class GetAllUsersQueryHandler : IRequestHandler<GetAllUsersQuery, Result<
 
     public async Task<Result<PagedResult<UserDto>>> Handle(GetAllUsersQuery request, CancellationToken cancellationToken)
     {
+        // Get paginated users
         var (items, totalCount) = await _unitOfWork.Users.GetPagedAsync(
             request.PageNumber,
             request.PageSize,
@@ -27,19 +28,27 @@ public class GetAllUsersQueryHandler : IRequestHandler<GetAllUsersQuery, Result<
             orderBy: null,
             cancellationToken);
 
-        var userDtos = items.Select(user => new UserDto
+        // Map to DTOs with roles
+        var userDtos = new List<UserDto>();
+        foreach (var user in items)
         {
-            Id = user.Id,
-            Username = user.Username,
-            Email = user.Email,
-            FullName = user.FullName,
-            PhoneNumber = user.PhoneNumber,
-            IsEnabled = user.IsEnabled,
-            IsApproved = user.IsApproved,
-            Roles = user.UserRoles.Select(ur => ur.Role.Name).ToList(),
-            CreatedAt = user.CreatedAt,
-            UpdatedAt = user.UpdatedAt
-        }).ToList();
+            // Fetch roles for each user
+            var roles = await _unitOfWork.Roles.GetRolesByUserIdAsync(user.Id, cancellationToken);
+            
+            userDtos.Add(new UserDto
+            {
+                Id = user.Id,
+                Username = user.Username,
+                Email = user.Email,
+                FullName = user.FullName,
+                PhoneNumber = user.PhoneNumber,
+                IsEnabled = user.IsEnabled,
+                IsApproved = user.IsApproved,
+                Roles = roles.ToList(),
+                CreatedAt = user.CreatedAt,
+                UpdatedAt = user.UpdatedAt
+            });
+        }
 
         var pagedResult = PagedResult<UserDto>.Create(userDtos, request.PageNumber, request.PageSize, totalCount);
 

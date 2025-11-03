@@ -18,4 +18,9 @@ public interface IUserRepository : IRepository<User>
     Task<IEnumerable<User>> SearchUsersAsync(string searchTerm, CancellationToken cancellationToken = default);
     Task<IEnumerable<RefreshToken>> GetActiveRefreshTokensAsync(Guid userId, CancellationToken cancellationToken = default);
     void AddRefreshToken(RefreshToken refreshToken);
+    
+    // UserRole management
+    Task<IEnumerable<UserRole>> GetActiveUserRolesAsync(Guid userId, CancellationToken cancellationToken = default);
+    void AddUserRole(UserRole userRole);
+    void RemoveUserRole(UserRole userRole);
 }

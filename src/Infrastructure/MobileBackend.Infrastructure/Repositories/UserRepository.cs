@@ -81,4 +81,22 @@ public class UserRepository : GenericRepository<User>, IUserRepository
     {
         _context.RefreshTokens.Add(refreshToken);
     }
+
+    // UserRole management methods
+    public async Task<IEnumerable<UserRole>> GetActiveUserRolesAsync(Guid userId, CancellationToken cancellationToken = default)
+    {
+        return await _context.UserRoles
+            .Where(ur => ur.UserId == userId && !ur.IsDeleted)
+            .ToListAsync(cancellationToken);
+    }
+
+    public void AddUserRole(UserRole userRole)
+    {
+        _context.UserRoles.Add(userRole);
+    }
+
+    public void RemoveUserRole(UserRole userRole)
+    {
+        _context.UserRoles.Remove(userRole);
+    }
 }
