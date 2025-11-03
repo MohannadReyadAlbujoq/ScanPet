@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.Extensions.Logging;
 using MobileBackend.Application.Common.Constants;
+using MobileBackend.Application.Common.Handlers;
 using MobileBackend.Application.Common.Interfaces;
 using MobileBackend.Application.DTOs.Common;
 using MobileBackend.Application.Interfaces;
@@ -10,73 +11,59 @@ namespace MobileBackend.Application.Features.Locations.Commands.CreateLocation;
 
 /// <summary>
 /// Handler for creating a new location
+/// Uses BaseCreateHandler to eliminate code duplication
 /// </summary>
-public class CreateLocationCommandHandler : IRequestHandler<CreateLocationCommand, Result<Guid>>
+public class CreateLocationCommandHandler : BaseCreateHandler<CreateLocationCommand, Location>
 {
-    private readonly IUnitOfWork _unitOfWork;
-    private readonly IAuditService _auditService;
-    private readonly ICurrentUserService _currentUserService;
-    private readonly ILogger<CreateLocationCommandHandler> _logger;
-
     public CreateLocationCommandHandler(
         IUnitOfWork unitOfWork,
         IAuditService auditService,
         ICurrentUserService currentUserService,
+        IDateTimeService dateTimeService,
         ILogger<CreateLocationCommandHandler> logger)
+        : base(unitOfWork, auditService, currentUserService, dateTimeService, logger)
     {
-        _unitOfWork = unitOfWork;
-        _auditService = auditService;
-        _currentUserService = currentUserService;
-        _logger = logger;
     }
 
-    public async Task<Result<Guid>> Handle(CreateLocationCommand request, CancellationToken cancellationToken)
+    protected override async Task<Location> CreateEntityAsync(
+        CreateLocationCommand command,
+        CancellationToken cancellationToken)
     {
-        try
+        return new Location
         {
-            // Check if location with same name already exists
-            var existingLocation = await _unitOfWork.Locations.GetByNameAsync(request.Name, cancellationToken);
-            if (existingLocation != null)
-            {
-                return Result<Guid>.FailureResult("A location with this name already exists", 409);
-            }
+            Id = Guid.NewGuid(),
+            Name = command.Name,
+            Address = command.Address,
+            City = command.City,
+            Country = command.Country,
+            PostalCode = command.PostalCode,
+            IsActive = command.IsActive,
+            IsDeleted = false
+        };
+    }
 
-            // Create new location
-            var location = new Location
-            {
-                Id = Guid.NewGuid(),
-                Name = request.Name,
-                Address = request.Address,
-                City = request.City,
-                Country = request.Country,
-                PostalCode = request.PostalCode,
-                IsActive = request.IsActive,
-                CreatedAt = DateTime.UtcNow,
-                UpdatedAt = DateTime.UtcNow,
-                IsDeleted = false
-            };
+    protected override Task AddEntityAsync(Location entity, CancellationToken cancellationToken)
+    {
+        return UnitOfWork.Locations.AddAsync(entity, cancellationToken);
+    }
 
-            await _unitOfWork.Locations.AddAsync(location);
-            await _unitOfWork.SaveChangesAsync(cancellationToken);
+    protected override string GetEntityName() => EntityNames.Location;
 
-            // Audit log
-            await _auditService.LogAsync(
-                action: AuditActions.LocationCreated,
-                entityName: EntityNames.Location,
-                entityId: location.Id,
-                userId: _currentUserService.UserId ?? Guid.Empty,
-                additionalInfo: $"Created location: {location.Name} in {location.City}, {location.Country}",
-                cancellationToken: cancellationToken
-            );
+    protected override string GetAuditAction() => AuditActions.LocationCreated;
 
-            _logger.LogInformation("Location created successfully: {LocationId} - {LocationName}", location.Id, location.Name);
+    protected override string GetAuditMessage(Location entity)
+        => $"Created location: {entity.Name} in {entity.City}, {entity.Country}";
 
-            return Result<Guid>.SuccessResult(location.Id);
-        }
-        catch (Exception ex)
+    // Override uniqueness validation
+    protected override async Task<Result<Guid>> ValidateUniquenessAsync(
+        CreateLocationCommand command,
+        CancellationToken cancellationToken)
+    {
+        var existingLocation = await UnitOfWork.Locations.GetByNameAsync(command.Name, cancellationToken);
+        if (existingLocation != null)
         {
-            _logger.LogError(ex, "Error creating location: {LocationName}", request.Name);
-            return Result<Guid>.FailureResult("An error occurred while creating the location", 500);
+            return Result<Guid>.FailureResult(ErrorMessages.AlreadyExists("Location", "name"), 409);
         }
+        return Result<Guid>.SuccessResult(Guid.Empty);
     }
 }

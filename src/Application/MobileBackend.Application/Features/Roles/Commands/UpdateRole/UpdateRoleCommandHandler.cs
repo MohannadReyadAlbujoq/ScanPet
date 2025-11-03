@@ -1,67 +1,69 @@
-using MediatR;
+using Microsoft.Extensions.Logging;
 using MobileBackend.Application.Common.Constants;
+using MobileBackend.Application.Common.Handlers;
 using MobileBackend.Application.Common.Interfaces;
 using MobileBackend.Application.DTOs.Common;
 using MobileBackend.Application.Interfaces;
+using MobileBackend.Domain.Entities;
 
 namespace MobileBackend.Application.Features.Roles.Commands.UpdateRole;
 
 /// <summary>
 /// Handler for UpdateRoleCommand
+/// Uses BaseUpdateHandler to eliminate code duplication
 /// </summary>
-public class UpdateRoleCommandHandler : IRequestHandler<UpdateRoleCommand, Result<bool>>
+public class UpdateRoleCommandHandler : BaseUpdateHandler<UpdateRoleCommand, Role>
 {
-    private readonly IUnitOfWork _unitOfWork;
-    private readonly IAuditService _auditService;
-    private readonly ICurrentUserService _currentUserService;
-    private readonly IDateTimeService _dateTimeService;
-
     public UpdateRoleCommandHandler(
         IUnitOfWork unitOfWork,
         IAuditService auditService,
         ICurrentUserService currentUserService,
-        IDateTimeService dateTimeService)
+        IDateTimeService dateTimeService,
+        ILogger<UpdateRoleCommandHandler> logger)
+        : base(unitOfWork, auditService, currentUserService, dateTimeService, logger)
     {
-        _unitOfWork = unitOfWork;
-        _auditService = auditService;
-        _currentUserService = currentUserService;
-        _dateTimeService = dateTimeService;
     }
 
-    public async Task<Result<bool>> Handle(UpdateRoleCommand request, CancellationToken cancellationToken)
+    protected override Guid GetEntityId(UpdateRoleCommand command) => command.RoleId;
+
+    protected override Task<Role?> GetEntityAsync(Guid id, CancellationToken cancellationToken)
+        => UnitOfWork.Roles.GetByIdAsync(id, cancellationToken);
+
+    protected override async Task UpdateEntityPropertiesAsync(
+        UpdateRoleCommand command,
+        Role entity,
+        CancellationToken cancellationToken)
     {
-        var role = await _unitOfWork.Roles.GetByIdAsync(request.RoleId, cancellationToken);
-        if (role == null)
+        entity.Name = command.Name;
+        entity.Description = command.Description;
+    }
+
+    protected override void UpdateEntity(Role entity)
+    {
+        UnitOfWork.Roles.Update(entity);
+    }
+
+    protected override string GetEntityName() => EntityNames.Role;
+
+    protected override string GetAuditAction() => AuditActions.RoleUpdated;
+
+    protected override string CaptureOldValues(Role entity)
+        => $"Name: {entity.Name}";
+
+    protected override string CaptureNewValues(Role entity)
+        => $"Name: {entity.Name}";
+
+    // Override uniqueness validation
+    protected override async Task<Result<bool>> ValidateUniquenessAsync(
+        UpdateRoleCommand command,
+        Role entity,
+        CancellationToken cancellationToken)
+    {
+        var existingRole = await UnitOfWork.Roles.GetByNameAsync(command.Name, cancellationToken);
+        if (existingRole != null && existingRole.Id != command.RoleId)
         {
-            return Result<bool>.FailureResult("Role not found", 404);
+            return Result<bool>.FailureResult(ErrorMessages.AlreadyExists("Role", "name"), 409);
         }
-
-        // Check if new name already exists (excluding current role)
-        var existingRole = await _unitOfWork.Roles.GetByNameAsync(request.Name, cancellationToken);
-        if (existingRole != null && existingRole.Id != request.RoleId)
-        {
-            return Result<bool>.FailureResult("Role name already exists", 400);
-        }
-
-        // Update role
-        var oldName = role.Name;
-        role.Name = request.Name;
-        role.Description = request.Description;
-        role.UpdatedAt = _dateTimeService.UtcNow;
-        role.UpdatedBy = _currentUserService.UserId;
-
-        _unitOfWork.Roles.Update(role);
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
-
-        // Audit log
-        await _auditService.LogAsync(
-            AuditActions.RoleUpdated,
-            EntityNames.Role,
-            role.Id,
-            _currentUserService.UserId ?? Guid.Empty,
-            $"Role updated: {oldName} -> {role.Name}",
-            cancellationToken);
-
         return Result<bool>.SuccessResult(true);
     }
 }

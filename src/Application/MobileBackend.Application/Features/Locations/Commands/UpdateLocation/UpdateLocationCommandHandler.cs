@@ -1,87 +1,74 @@
 using MediatR;
 using Microsoft.Extensions.Logging;
 using MobileBackend.Application.Common.Constants;
+using MobileBackend.Application.Common.Handlers;
 using MobileBackend.Application.Common.Interfaces;
 using MobileBackend.Application.DTOs.Common;
 using MobileBackend.Application.Interfaces;
+using MobileBackend.Domain.Entities;
 
 namespace MobileBackend.Application.Features.Locations.Commands.UpdateLocation;
 
 /// <summary>
 /// Handler for updating an existing location
+/// Uses BaseUpdateHandler to eliminate code duplication
 /// </summary>
-public class UpdateLocationCommandHandler : IRequestHandler<UpdateLocationCommand, Result<bool>>
+public class UpdateLocationCommandHandler : BaseUpdateHandler<UpdateLocationCommand, Location>
 {
-    private readonly IUnitOfWork _unitOfWork;
-    private readonly IAuditService _auditService;
-    private readonly ICurrentUserService _currentUserService;
-    private readonly ILogger<UpdateLocationCommandHandler> _logger;
-
     public UpdateLocationCommandHandler(
         IUnitOfWork unitOfWork,
         IAuditService auditService,
         ICurrentUserService currentUserService,
+        IDateTimeService dateTimeService,
         ILogger<UpdateLocationCommandHandler> logger)
+        : base(unitOfWork, auditService, currentUserService, dateTimeService, logger)
     {
-        _unitOfWork = unitOfWork;
-        _auditService = auditService;
-        _currentUserService = currentUserService;
-        _logger = logger;
     }
 
-    public async Task<Result<bool>> Handle(UpdateLocationCommand request, CancellationToken cancellationToken)
+    protected override Guid GetEntityId(UpdateLocationCommand command) => command.LocationId;
+
+    protected override Task<Location?> GetEntityAsync(Guid id, CancellationToken cancellationToken)
+        => UnitOfWork.Locations.GetByIdAsync(id, cancellationToken);
+
+    protected override async Task UpdateEntityPropertiesAsync(
+        UpdateLocationCommand command,
+        Location entity,
+        CancellationToken cancellationToken)
     {
-        try
+        entity.Name = command.Name;
+        entity.Address = command.Address;
+        entity.City = command.City;
+        entity.Country = command.Country;
+        entity.PostalCode = command.PostalCode;
+        entity.IsActive = command.IsActive;
+    }
+
+    protected override void UpdateEntity(Location entity)
+    {
+        UnitOfWork.Locations.Update(entity);
+    }
+
+    protected override string GetEntityName() => EntityNames.Location;
+
+    protected override string GetAuditAction() => AuditActions.LocationUpdated;
+
+    protected override string CaptureOldValues(Location entity)
+        => $"Name: {entity.Name}, Address: {entity.Address}, City: {entity.City}";
+
+    protected override string CaptureNewValues(Location entity)
+        => $"Name: {entity.Name}, Address: {entity.Address}, City: {entity.City}";
+
+    // Override uniqueness validation
+    protected override async Task<Result<bool>> ValidateUniquenessAsync(
+        UpdateLocationCommand command,
+        Location entity,
+        CancellationToken cancellationToken)
+    {
+        var existingLocation = await UnitOfWork.Locations.GetByNameAsync(command.Name, cancellationToken);
+        if (existingLocation != null && existingLocation.Id != command.LocationId)
         {
-            // Get existing location
-            var location = await _unitOfWork.Locations.GetByIdAsync(request.LocationId);
-            if (location == null)
-            {
-                return Result<bool>.FailureResult("Location not found", 404);
-            }
-
-            // Check if another location with same name exists
-            var existingLocation = await _unitOfWork.Locations.GetByNameAsync(request.Name, cancellationToken);
-            if (existingLocation != null && existingLocation.Id != request.LocationId)
-            {
-                return Result<bool>.FailureResult("Another location with this name already exists", 409);
-            }
-
-            // Store old values for audit
-            var oldValues = $"Name: {location.Name}, Address: {location.Address}, City: {location.City}";
-            var newValues = $"Name: {request.Name}, Address: {request.Address}, City: {request.City}";
-
-            // Update location properties
-            location.Name = request.Name;
-            location.Address = request.Address;
-            location.City = request.City;
-            location.Country = request.Country;
-            location.PostalCode = request.PostalCode;
-            location.IsActive = request.IsActive;
-            location.UpdatedAt = DateTime.UtcNow;
-
-            _unitOfWork.Locations.Update(location);
-            await _unitOfWork.SaveChangesAsync(cancellationToken);
-
-            // Audit log
-            await _auditService.LogActionAsync(
-                userId: _currentUserService.UserId,
-                action: AuditActions.LocationUpdated,
-                entityName: EntityNames.Location,
-                entityId: location.Id,
-                oldValues: oldValues,
-                newValues: newValues,
-                cancellationToken: cancellationToken
-            );
-
-            _logger.LogInformation("Location updated successfully: {LocationId} - {LocationName}", location.Id, location.Name);
-
-            return Result<bool>.SuccessResult(true);
+            return Result<bool>.FailureResult(ErrorMessages.AlreadyExists("Location", "name"), 409);
         }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error updating location: {LocationId}", request.LocationId);
-            return Result<bool>.FailureResult("An error occurred while updating the location", 500);
-        }
+        return Result<bool>.SuccessResult(true);
     }
 }

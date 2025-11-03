@@ -1,5 +1,6 @@
-using MediatR;
+using Microsoft.Extensions.Logging;
 using MobileBackend.Application.Common.Constants;
+using MobileBackend.Application.Common.Handlers;
 using MobileBackend.Application.Common.Interfaces;
 using MobileBackend.Application.DTOs.Common;
 using MobileBackend.Application.Interfaces;
@@ -9,57 +10,55 @@ namespace MobileBackend.Application.Features.Roles.Commands.CreateRole;
 
 /// <summary>
 /// Handler for CreateRoleCommand
+/// Uses BaseCreateHandler to eliminate code duplication
 /// </summary>
-public class CreateRoleCommandHandler : IRequestHandler<CreateRoleCommand, Result<Guid>>
+public class CreateRoleCommandHandler : BaseCreateHandler<CreateRoleCommand, Role>
 {
-    private readonly IUnitOfWork _unitOfWork;
-    private readonly IAuditService _auditService;
-    private readonly ICurrentUserService _currentUserService;
-    private readonly IDateTimeService _dateTimeService;
-
     public CreateRoleCommandHandler(
         IUnitOfWork unitOfWork,
         IAuditService auditService,
         ICurrentUserService currentUserService,
-        IDateTimeService dateTimeService)
+        IDateTimeService dateTimeService,
+        ILogger<CreateRoleCommandHandler> logger)
+        : base(unitOfWork, auditService, currentUserService, dateTimeService, logger)
     {
-        _unitOfWork = unitOfWork;
-        _auditService = auditService;
-        _currentUserService = currentUserService;
-        _dateTimeService = dateTimeService;
     }
 
-    public async Task<Result<Guid>> Handle(CreateRoleCommand request, CancellationToken cancellationToken)
+    protected override async Task<Role> CreateEntityAsync(
+        CreateRoleCommand command,
+        CancellationToken cancellationToken)
     {
-        // Check if role name already exists
-        var existingRole = await _unitOfWork.Roles.GetByNameAsync(request.Name, cancellationToken);
-        if (existingRole != null)
-        {
-            return Result<Guid>.FailureResult("Role name already exists", 400);
-        }
-
-        // Create new role
-        var role = new Role
+        return new Role
         {
             Id = Guid.NewGuid(),
-            Name = request.Name,
-            Description = request.Description,
-            CreatedAt = _dateTimeService.UtcNow,
-            CreatedBy = _currentUserService.UserId ?? Guid.Empty
+            Name = command.Name,
+            Description = command.Description,
+            IsDeleted = false
         };
+    }
 
-        await _unitOfWork.Roles.AddAsync(role, cancellationToken);
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
+    protected override Task AddEntityAsync(Role entity, CancellationToken cancellationToken)
+    {
+        return UnitOfWork.Roles.AddAsync(entity, cancellationToken);
+    }
 
-        // Audit log
-        await _auditService.LogAsync(
-            AuditActions.RoleCreated,
-            EntityNames.Role,
-            role.Id,
-            _currentUserService.UserId ?? Guid.Empty,
-            $"Role created: {role.Name}",
-            cancellationToken);
+    protected override string GetEntityName() => EntityNames.Role;
 
-        return Result<Guid>.SuccessResult(role.Id, 201);
+    protected override string GetAuditAction() => AuditActions.RoleCreated;
+
+    protected override string GetAuditMessage(Role entity)
+        => $"Role created: {entity.Name}";
+
+    // Override uniqueness validation
+    protected override async Task<Result<Guid>> ValidateUniquenessAsync(
+        CreateRoleCommand command,
+        CancellationToken cancellationToken)
+    {
+        var existingRole = await UnitOfWork.Roles.GetByNameAsync(command.Name, cancellationToken);
+        if (existingRole != null)
+        {
+            return Result<Guid>.FailureResult(ErrorMessages.AlreadyExists("Role", "name"), 409);
+        }
+        return Result<Guid>.SuccessResult(Guid.Empty);
     }
 }
