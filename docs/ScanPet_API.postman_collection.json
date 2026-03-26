@@ -1,0 +1,821 @@
+{
+  "info": {
+    "name": "ScanPet Mobile Backend API",
+    "description": "Complete API collection for ScanPet Mobile Backend.\n\nDefault credentials:\n- Admin: admin / Admin@123\n- Manager: manager / Manager@123\n- User: user / User@123\n\nAll endpoints (except auth) require Bearer token in Authorization header.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "https://scanpet-production.up.railway.app", "type": "string" },
+    { "key": "accessToken", "value": "", "type": "string" },
+    { "key": "refreshToken", "value": "", "type": "string" },
+    { "key": "userId", "value": "", "type": "string" },
+    { "key": "roleId", "value": "", "type": "string" },
+    { "key": "colorId", "value": "", "type": "string" },
+    { "key": "itemId", "value": "", "type": "string" },
+    { "key": "locationId", "value": "", "type": "string" },
+    { "key": "orderId", "value": "", "type": "string" },
+    { "key": "inventoryId", "value": "", "type": "string" }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }]
+  },
+  "item": [
+    {
+      "name": "Health Check",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/health", "host": ["{{baseUrl}}"], "path": ["health"] },
+            "auth": { "type": "noauth" }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Register",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"newuser\",\n  \"email\": \"newuser@example.com\",\n  \"password\": \"NewUser@123\",\n  \"confirmPassword\": \"NewUser@123\",\n  \"fullName\": \"New User\",\n  \"phoneNumber\": \"+962791234567\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/auth/register", "host": ["{{baseUrl}}"], "path": ["api", "auth", "register"] },
+            "auth": { "type": "noauth" }
+          }
+        },
+        {
+          "name": "Login (Admin)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.success && jsonData.data) {",
+                  "    pm.collectionVariables.set('accessToken', jsonData.data.accessToken);",
+                  "    pm.collectionVariables.set('refreshToken', jsonData.data.refreshToken);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"usernameOrEmail\": \"admin\",\n  \"password\": \"Admin@123\",\n  \"deviceInfo\": \"Postman\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/auth/login", "host": ["{{baseUrl}}"], "path": ["api", "auth", "login"] },
+            "auth": { "type": "noauth" }
+          }
+        },
+        {
+          "name": "Login (Manager)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.success && jsonData.data) {",
+                  "    pm.collectionVariables.set('accessToken', jsonData.data.accessToken);",
+                  "    pm.collectionVariables.set('refreshToken', jsonData.data.refreshToken);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"usernameOrEmail\": \"manager\",\n  \"password\": \"Manager@123\",\n  \"deviceInfo\": \"Postman\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/auth/login", "host": ["{{baseUrl}}"], "path": ["api", "auth", "login"] },
+            "auth": { "type": "noauth" }
+          }
+        },
+        {
+          "name": "Refresh Token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.success && jsonData.data) {",
+                  "    pm.collectionVariables.set('accessToken', jsonData.data.accessToken);",
+                  "    pm.collectionVariables.set('refreshToken', jsonData.data.refreshToken);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\",\n  \"deviceInfo\": \"Postman\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/auth/refresh", "host": ["{{baseUrl}}"], "path": ["api", "auth", "refresh"] },
+            "auth": { "type": "noauth" }
+          }
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "\"{{refreshToken}}\""
+            },
+            "url": { "raw": "{{baseUrl}}/api/auth/logout", "host": ["{{baseUrl}}"], "path": ["api", "auth", "logout"] }
+          }
+        },
+        {
+          "name": "Get Current User (Me)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/auth/me", "host": ["{{baseUrl}}"], "path": ["api", "auth", "me"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Users",
+      "item": [
+        {
+          "name": "Get All Users (Paginated)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/users?pageNumber=1&pageSize=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "users"],
+              "query": [
+                { "key": "pageNumber", "value": "1" },
+                { "key": "pageSize", "value": "10" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get User By ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/users/{{userId}}", "host": ["{{baseUrl}}"], "path": ["api", "users", "{{userId}}"] }
+          }
+        },
+        {
+          "name": "Create User",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.success && jsonData.data) {",
+                  "    pm.collectionVariables.set('userId', jsonData.data);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"testuser\",\n  \"email\": \"testuser@example.com\",\n  \"password\": \"Test@12345\",\n  \"fullName\": \"Test User\",\n  \"phoneNumber\": \"+962791234567\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/users", "host": ["{{baseUrl}}"], "path": ["api", "users"] }
+          }
+        },
+        {
+          "name": "Activate User",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/users/{{userId}}/activate", "host": ["{{baseUrl}}"], "path": ["api", "users", "{{userId}}", "activate"] }
+          }
+        },
+        {
+          "name": "Deactivate User",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/users/{{userId}}/deactivate", "host": ["{{baseUrl}}"], "path": ["api", "users", "{{userId}}", "deactivate"] }
+          }
+        },
+        {
+          "name": "Enable User",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/users/{{userId}}/enable", "host": ["{{baseUrl}}"], "path": ["api", "users", "{{userId}}", "enable"] }
+          }
+        },
+        {
+          "name": "Disable User",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/users/{{userId}}/disable", "host": ["{{baseUrl}}"], "path": ["api", "users", "{{userId}}", "disable"] }
+          }
+        },
+        {
+          "name": "Update User Role",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"roleId\": \"{{roleId}}\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/users/{{userId}}/role", "host": ["{{baseUrl}}"], "path": ["api", "users", "{{userId}}", "role"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Roles",
+      "item": [
+        {
+          "name": "Get All Roles",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/roles", "host": ["{{baseUrl}}"], "path": ["api", "roles"] }
+          }
+        },
+        {
+          "name": "Get Role By ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/roles/{{roleId}}", "host": ["{{baseUrl}}"], "path": ["api", "roles", "{{roleId}}"] }
+          }
+        },
+        {
+          "name": "Create Role",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.success && jsonData.data) {",
+                  "    pm.collectionVariables.set('roleId', jsonData.data);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Supervisor\",\n  \"description\": \"Shift supervisor role\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/roles", "host": ["{{baseUrl}}"], "path": ["api", "roles"] }
+          }
+        },
+        {
+          "name": "Update Role",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Supervisor Updated\",\n  \"description\": \"Updated supervisor role\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/roles/{{roleId}}", "host": ["{{baseUrl}}"], "path": ["api", "roles", "{{roleId}}"] }
+          }
+        },
+        {
+          "name": "Delete Role",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/roles/{{roleId}}", "host": ["{{baseUrl}}"], "path": ["api", "roles", "{{roleId}}"] }
+          }
+        },
+        {
+          "name": "Assign Permissions to Role",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"roleId\": \"{{roleId}}\",\n  \"permissions\": [\n    \"ColorCreate\",\n    \"ColorEdit\",\n    \"ColorView\",\n    \"ItemView\",\n    \"OrderCreate\",\n    \"OrderView\"\n  ]\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/roles/{{roleId}}/permissions", "host": ["{{baseUrl}}"], "path": ["api", "roles", "{{roleId}}", "permissions"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Colors",
+      "item": [
+        {
+          "name": "Get All Colors",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/colors", "host": ["{{baseUrl}}"], "path": ["api", "colors"] }
+          }
+        },
+        {
+          "name": "Search Colors",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/colors/search?searchTerm=red&pageNumber=1&pageSize=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "colors", "search"],
+              "query": [
+                { "key": "searchTerm", "value": "red" },
+                { "key": "pageNumber", "value": "1" },
+                { "key": "pageSize", "value": "10" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Color By ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/colors/{{colorId}}", "host": ["{{baseUrl}}"], "path": ["api", "colors", "{{colorId}}"] }
+          }
+        },
+        {
+          "name": "Create Color",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.success && jsonData.data) {",
+                  "    pm.collectionVariables.set('colorId', jsonData.data);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Ocean Blue\",\n  \"description\": \"Deep ocean blue\",\n  \"redValue\": 0,\n  \"greenValue\": 105,\n  \"blueValue\": 180\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/colors", "host": ["{{baseUrl}}"], "path": ["api", "colors"] }
+          }
+        },
+        {
+          "name": "Update Color",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Sky Blue\",\n  \"description\": \"Light sky blue\",\n  \"redValue\": 135,\n  \"greenValue\": 206,\n  \"blueValue\": 235\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/colors/{{colorId}}", "host": ["{{baseUrl}}"], "path": ["api", "colors", "{{colorId}}"] }
+          }
+        },
+        {
+          "name": "Delete Color",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/colors/{{colorId}}", "host": ["{{baseUrl}}"], "path": ["api", "colors", "{{colorId}}"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Items",
+      "item": [
+        {
+          "name": "Get All Items (Paginated)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/items?pageNumber=1&pageSize=5",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "items"],
+              "query": [
+                { "key": "pageNumber", "value": "1" },
+                { "key": "pageSize", "value": "5" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Items Page 2",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/items?pageNumber=2&pageSize=5",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "items"],
+              "query": [
+                { "key": "pageNumber", "value": "2" },
+                { "key": "pageSize", "value": "5" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Items By Inventory (Filter)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/items?pageNumber=1&pageSize=10&inventoryId={{inventoryId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "items"],
+              "query": [
+                { "key": "pageNumber", "value": "1" },
+                { "key": "pageSize", "value": "10" },
+                { "key": "inventoryId", "value": "{{inventoryId}}" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Item By ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/items/{{itemId}}", "host": ["{{baseUrl}}"], "path": ["api", "items", "{{itemId}}"] }
+          }
+        },
+        {
+          "name": "Create Item",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.success && jsonData.data) {",
+                  "    pm.collectionVariables.set('itemId', jsonData.data);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Pet Food Premium\",\n  \"description\": \"High-quality pet food\",\n  \"sku\": \"PF-NEW-001\",\n  \"basePrice\": 29.99,\n  \"quantity\": 100,\n  \"colorId\": null,\n  \"imageUrl\": null\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/items", "host": ["{{baseUrl}}"], "path": ["api", "items"] }
+          }
+        },
+        {
+          "name": "Update Item",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Pet Food Premium v2\",\n  \"description\": \"Updated high-quality pet food\",\n  \"sku\": \"PF-NEW-001\",\n  \"basePrice\": 34.99,\n  \"quantity\": 150,\n  \"colorId\": null,\n  \"imageUrl\": null\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/items/{{itemId}}", "host": ["{{baseUrl}}"], "path": ["api", "items", "{{itemId}}"] }
+          }
+        },
+        {
+          "name": "Delete Item",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/items/{{itemId}}", "host": ["{{baseUrl}}"], "path": ["api", "items", "{{itemId}}"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Locations",
+      "item": [
+        {
+          "name": "Get All Locations",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/locations", "host": ["{{baseUrl}}"], "path": ["api", "locations"] }
+          }
+        },
+        {
+          "name": "Get Location By ID (with Sections)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/locations/{{locationId}}", "host": ["{{baseUrl}}"], "path": ["api", "locations", "{{locationId}}"] }
+          }
+        },
+        {
+          "name": "Create Location",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.success && jsonData.data) {",
+                  "    pm.collectionVariables.set('locationId', jsonData.data);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Main Store\",\n  \"address\": \"123 Pet Street\",\n  \"city\": \"Amman\",\n  \"country\": \"Jordan\",\n  \"postalCode\": \"11183\",\n  \"isActive\": true\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/locations", "host": ["{{baseUrl}}"], "path": ["api", "locations"] }
+          }
+        },
+        {
+          "name": "Update Location",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Main Store Updated\",\n  \"address\": \"456 New Pet Street\",\n  \"city\": \"Amman\",\n  \"country\": \"Jordan\",\n  \"postalCode\": \"11184\",\n  \"isActive\": true\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/locations/{{locationId}}", "host": ["{{baseUrl}}"], "path": ["api", "locations", "{{locationId}}"] }
+          }
+        },
+        {
+          "name": "Delete Location",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/locations/{{locationId}}", "host": ["{{baseUrl}}"], "path": ["api", "locations", "{{locationId}}"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Inventories (Sections)",
+      "item": [
+        {
+          "name": "Create Inventory/Section",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.success && jsonData.data) {",
+                  "    pm.collectionVariables.set('inventoryId', jsonData.data);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Main Warehouse\",\n  \"location\": \"Industrial Zone, Amman\",\n  \"description\": \"Primary storage facility\",\n  \"isActive\": true,\n  \"locationId\": \"{{locationId}}\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/inventories", "host": ["{{baseUrl}}"], "path": ["api", "inventories"] }
+          }
+        },
+        {
+          "name": "Get All Inventories",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/inventories", "host": ["{{baseUrl}}"], "path": ["api", "inventories"] }
+          }
+        },
+        {
+          "name": "Get Inventory By ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/inventories/{{inventoryId}}", "host": ["{{baseUrl}}"], "path": ["api", "inventories", "{{inventoryId}}"] }
+          }
+        },
+        {
+          "name": "Update Inventory",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Main Warehouse Updated\",\n  \"location\": \"New Industrial Zone\",\n  \"description\": \"Updated primary storage\",\n  \"isActive\": true,\n  \"locationId\": \"{{locationId}}\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/inventories/{{inventoryId}}", "host": ["{{baseUrl}}"], "path": ["api", "inventories", "{{inventoryId}}"] }
+          }
+        },
+        {
+          "name": "Delete Inventory",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/inventories/{{inventoryId}}", "host": ["{{baseUrl}}"], "path": ["api", "inventories", "{{inventoryId}}"] }
+          }
+        },
+        {
+          "name": "Get Items in Inventory",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/inventories/{{inventoryId}}/items", "host": ["{{baseUrl}}"], "path": ["api", "inventories", "{{inventoryId}}", "items"] }
+          }
+        },
+        {
+          "name": "Get Item Stock Across Warehouses",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/inventories/items/{{itemId}}", "host": ["{{baseUrl}}"], "path": ["api", "inventories", "items", "{{itemId}}"] }
+          }
+        },
+        {
+          "name": "Get Active Inventories",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/inventories/active", "host": ["{{baseUrl}}"], "path": ["api", "inventories", "active"] }
+          }
+        },
+        {
+          "name": "Get Low Stock Items",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/inventories/low-stock", "host": ["{{baseUrl}}"], "path": ["api", "inventories", "low-stock"] }
+          }
+        },
+        {
+          "name": "Set Item Inventory",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"itemId\": \"{{itemId}}\",\n  \"inventoryId\": \"{{inventoryId}}\",\n  \"quantity\": 100,\n  \"minimumQuantity\": 10,\n  \"maximumQuantity\": 500,\n  \"notes\": \"Initial stock\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/inventories/items", "host": ["{{baseUrl}}"], "path": ["api", "inventories", "items"] }
+          }
+        },
+        {
+          "name": "Adjust Inventory",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"itemId\": \"{{itemId}}\",\n  \"inventoryId\": \"{{inventoryId}}\",\n  \"quantityChange\": -5,\n  \"notes\": \"Damaged goods removed\",\n  \"reason\": \"Quality control\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/inventories/adjust", "host": ["{{baseUrl}}"], "path": ["api", "inventories", "adjust"] }
+          }
+        },
+        {
+          "name": "Transfer Between Warehouses",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"itemId\": \"{{itemId}}\",\n  \"fromInventoryId\": \"{{inventoryId}}\",\n  \"toInventoryId\": \"REPLACE_WITH_TARGET_INVENTORY_ID\",\n  \"quantity\": 25,\n  \"notes\": \"Rebalancing stock\",\n  \"reason\": \"Customer demand shift\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/inventories/transfer", "host": ["{{baseUrl}}"], "path": ["api", "inventories", "transfer"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Orders",
+      "item": [
+        {
+          "name": "Get All Orders (Paginated)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/orders?pageNumber=1&pageSize=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "orders"],
+              "query": [
+                { "key": "pageNumber", "value": "1" },
+                { "key": "pageSize", "value": "10" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Order By ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/orders/{{orderId}}", "host": ["{{baseUrl}}"], "path": ["api", "orders", "{{orderId}}"] }
+          }
+        },
+        {
+          "name": "Create Order",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.success && jsonData.data) {",
+                  "    pm.collectionVariables.set('orderId', jsonData.data);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"clientName\": \"Ahmad Ali\",\n  \"clientPhone\": \"+962791234567\",\n  \"locationId\": \"{{locationId}}\",\n  \"description\": \"Rush order\",\n  \"orderItems\": [\n    {\n      \"itemId\": \"{{itemId}}\",\n      \"quantity\": 2,\n      \"unitPrice\": 29.99\n    }\n  ]\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/orders", "host": ["{{baseUrl}}"], "path": ["api", "orders"] }
+          }
+        },
+        {
+          "name": "Confirm Order",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/orders/{{orderId}}/confirm", "host": ["{{baseUrl}}"], "path": ["api", "orders", "{{orderId}}", "confirm"] }
+          }
+        },
+        {
+          "name": "Cancel Order",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/orders/{{orderId}}/cancel?reason=Out of stock",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "orders", "{{orderId}}", "cancel"],
+              "query": [{ "key": "reason", "value": "Out of stock" }]
+            }
+          }
+        },
+        {
+          "name": "Refund Order Item",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refundQuantity\": 1,\n  \"refundReason\": \"Defective product\",\n  \"refundToInventoryId\": \"{{inventoryId}}\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/orders/refund/REPLACE_WITH_SERIAL_NUMBER", "host": ["{{baseUrl}}"], "path": ["api", "orders", "refund", "REPLACE_WITH_SERIAL_NUMBER"] }
+          }
+        }
+      ]
+    }
+  ]
+}

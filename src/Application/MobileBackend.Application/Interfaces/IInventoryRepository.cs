@@ -33,4 +33,14 @@ public interface IInventoryRepository : IRepository<Inventory>
     /// Prevents N+1 query problem
     /// </summary>
     Task<(Inventory? Inventory, int ItemCount)> GetByIdWithItemCountAsync(Guid id, CancellationToken cancellationToken = default);
+    
+    /// <summary>
+    /// Get inventories by parent location ID
+    /// </summary>
+    Task<List<Inventory>> GetByLocationIdAsync(Guid locationId, CancellationToken cancellationToken = default);
+    
+    /// <summary>
+    /// Get inventories by location ID with item counts
+    /// </summary>
+    Task<IEnumerable<(Inventory Inventory, int ItemCount)>> GetByLocationIdWithItemCountsAsync(Guid locationId, CancellationToken cancellationToken = default);
 }

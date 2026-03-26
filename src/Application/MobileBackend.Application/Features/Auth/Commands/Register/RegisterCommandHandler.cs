@@ -33,6 +33,15 @@ public class RegisterCommandHandler : IRequestHandler<RegisterCommand, Result<Gu
             // 1. Check if username already exists
             if (!await _unitOfWork.Users.IsUsernameAvailableAsync(request.Username, cancellationToken))
             {
+                // Check if the existing user is not activated — give a better message
+                var existingUser = await _unitOfWork.Users.GetByUsernameAsync(request.Username, cancellationToken);
+                if (existingUser != null && (!existingUser.IsApproved || !existingUser.IsEnabled))
+                {
+                    _logger.LogWarning("Registration failed: Username exists but not activated - {Username}", request.Username);
+                    return Result<Guid>.FailureResult(
+                        "This username is already registered but the account is not yet activated. Please contact the administrator to activate your account.", 409);
+                }
+
                 _logger.LogWarning("Registration failed: Username already exists - {Username}", request.Username);
                 return Result<Guid>.FailureResult("Username is already taken", 400);
             }
@@ -40,6 +49,15 @@ public class RegisterCommandHandler : IRequestHandler<RegisterCommand, Result<Gu
             // 2. Check if email already exists
             if (!await _unitOfWork.Users.IsEmailAvailableAsync(request.Email, cancellationToken))
             {
+                // Check if the existing user is not activated — give a better message
+                var existingUser = await _unitOfWork.Users.GetByEmailAsync(request.Email, cancellationToken);
+                if (existingUser != null && (!existingUser.IsApproved || !existingUser.IsEnabled))
+                {
+                    _logger.LogWarning("Registration failed: Email exists but not activated - {Email}", request.Email);
+                    return Result<Guid>.FailureResult(
+                        "This email is already registered but the account is not yet activated. Please contact the administrator to activate your account.", 409);
+                }
+
                 _logger.LogWarning("Registration failed: Email already exists - {Email}", request.Email);
                 return Result<Guid>.FailureResult("Email is already registered", 400);
             }

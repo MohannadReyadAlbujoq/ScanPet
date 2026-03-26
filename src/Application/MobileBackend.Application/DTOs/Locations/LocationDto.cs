@@ -1,3 +1,5 @@
+using MobileBackend.Application.DTOs.Inventories;
+
 namespace MobileBackend.Application.DTOs.Locations;
 
 /// <summary>
@@ -45,6 +47,16 @@ public class LocationDto
     /// Number of orders at this location (only in responses)
     /// </summary>
     public int? OrderCount { get; set; }
+    
+    /// <summary>
+    /// Number of inventory sections at this location (only in responses)
+    /// </summary>
+    public int? SectionCount { get; set; }
+    
+    /// <summary>
+    /// Inventory sections/warehouses within this location (only in detailed responses)
+    /// </summary>
+    public List<InventoryDto>? Sections { get; set; }
     
     /// <summary>
     /// Creation timestamp (only in responses)

@@ -25,20 +25,25 @@ public class ItemsController : BaseApiController
     }
 
     /// <summary>
-    /// Get all items
+    /// Get all items with pagination and optional filtering
     /// </summary>
-    /// <param name="pageNumber">Page number (optional)</param>
-    /// <param name="pageSize">Page size (optional)</param>
-    /// <returns>List of all items</returns>
+    /// <param name="pageNumber">Page number (defaults to 1)</param>
+    /// <param name="pageSize">Page size (defaults to 10, max 100)</param>
+    /// <param name="inventoryId">Optional inventory/section ID to filter items by</param>
+    /// <returns>Paged list of items with pagination metadata</returns>
     [HttpGet]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    public async Task<IActionResult> GetAll([FromQuery] int? pageNumber, [FromQuery] int? pageSize)
+    public async Task<IActionResult> GetAll(
+        [FromQuery] int pageNumber = 1, 
+        [FromQuery] int pageSize = 10,
+        [FromQuery] Guid? inventoryId = null)
     {
         var query = new GetAllItemsQuery
         {
             PageNumber = pageNumber,
-            PageSize = pageSize
+            PageSize = pageSize,
+            InventoryId = inventoryId
         };
         var result = await Mediator.Send(query);
 

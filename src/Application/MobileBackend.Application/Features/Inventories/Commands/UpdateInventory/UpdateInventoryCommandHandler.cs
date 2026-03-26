@@ -38,6 +38,7 @@ public class UpdateInventoryCommandHandler : BaseUpdateHandler<UpdateInventoryCo
         entity.Location = command.Location;
         entity.Description = command.Description;
         entity.IsActive = command.IsActive;
+        entity.LocationId = command.LocationId;
     }
 
     protected override void UpdateEntity(Inventory entity)
@@ -50,10 +51,10 @@ public class UpdateInventoryCommandHandler : BaseUpdateHandler<UpdateInventoryCo
     protected override string GetAuditAction() => AuditActions.InventoryUpdated;
 
     protected override string CaptureOldValues(Inventory entity)
-        => $"Name: {entity.Name}, Location: {entity.Location}, IsActive: {entity.IsActive}";
+        => $"Name: {entity.Name}, Location: {entity.Location}, IsActive: {entity.IsActive}, LocationId: {entity.LocationId}";
 
     protected override string CaptureNewValues(Inventory entity)
-        => $"Name: {entity.Name}, Location: {entity.Location}, IsActive: {entity.IsActive}";
+        => $"Name: {entity.Name}, Location: {entity.Location}, IsActive: {entity.IsActive}, LocationId: {entity.LocationId}";
 
     // Override uniqueness validation
     protected override async Task<Result<bool>> ValidateUniquenessAsync(
@@ -65,6 +66,23 @@ public class UpdateInventoryCommandHandler : BaseUpdateHandler<UpdateInventoryCo
         if (existingInventory != null && existingInventory.Id != command.Id)
         {
             return Result<bool>.FailureResult(ErrorMessages.AlreadyExists("Inventory", "name"), 409);
+        }
+        return Result<bool>.SuccessResult(true);
+    }
+
+    // Validate LocationId if provided
+    protected override async Task<Result<bool>> ValidateAsync(
+        UpdateInventoryCommand command,
+        Inventory entity,
+        CancellationToken cancellationToken)
+    {
+        if (command.LocationId.HasValue)
+        {
+            var location = await UnitOfWork.Locations.GetByIdAsync(command.LocationId.Value, cancellationToken);
+            if (location == null)
+            {
+                return Result<bool>.FailureResult(ErrorMessages.NotFound("Location"), 404);
+            }
         }
         return Result<bool>.SuccessResult(true);
     }

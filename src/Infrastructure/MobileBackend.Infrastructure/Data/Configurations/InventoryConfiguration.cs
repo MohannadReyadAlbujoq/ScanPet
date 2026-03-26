@@ -32,6 +32,9 @@ public class InventoryConfiguration : IEntityTypeConfiguration<Inventory>
             .IsRequired()
             .HasDefaultValue(true);
 
+        builder.Property(i => i.LocationId)
+            .IsRequired(false);
+
         // Soft Delete
         builder.Property(i => i.IsDeleted)
             .IsRequired()
@@ -56,6 +59,12 @@ public class InventoryConfiguration : IEntityTypeConfiguration<Inventory>
         builder.Property(i => i.UpdatedBy)
             .IsRequired(false);
 
+        // Relationship: Inventory belongs to Location (optional)
+        builder.HasOne(i => i.ParentLocation)
+            .WithMany(l => l.Inventories)
+            .HasForeignKey(i => i.LocationId)
+            .OnDelete(DeleteBehavior.Restrict);
+
         // Indexes - PostgreSQL syntax
         builder.HasIndex(i => i.Name)
             .HasDatabaseName("IX_Inventories_Name")
@@ -63,6 +72,10 @@ public class InventoryConfiguration : IEntityTypeConfiguration<Inventory>
 
         builder.HasIndex(i => i.IsActive)
             .HasDatabaseName("IX_Inventories_IsActive")
+            .HasFilter("\"IsDeleted\" = false");
+
+        builder.HasIndex(i => i.LocationId)
+            .HasDatabaseName("IX_Inventories_LocationId")
             .HasFilter("\"IsDeleted\" = false");
 
         builder.HasIndex(i => i.CreatedBy)

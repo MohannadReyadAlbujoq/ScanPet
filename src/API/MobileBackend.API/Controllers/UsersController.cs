@@ -104,34 +104,108 @@ public class UsersController : BaseApiController
     }
 
     /// <summary>
-    /// Approve or reject user account
+    /// Activate a user account (approve + enable).
+    /// Used by admin to activate newly registered users.
+    /// No request body needed — just provide user ID in the URL.
     /// </summary>
     /// <param name="id">User ID</param>
-    /// <param name="request">Approval details</param>
     /// <returns>Success response</returns>
-    [HttpPut("{id}/approve")]
+    [HttpPut("{id}/activate")]
     [ProducesResponseType(StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    public async Task<IActionResult> Approve(Guid id, [FromBody] UserApprovalDto request)
+    public async Task<IActionResult> Activate(Guid id)
     {
-        if (id != request.UserId)
-        {
-            return BadRequestResponse("User ID mismatch");
-        }
-
         var command = new ApproveUserCommand
         {
-            UserId = request.UserId,
-            IsApproved = request.IsApproved,
-            IsEnabled = request.IsEnabled
+            UserId = id,
+            IsApproved = true,
+            IsEnabled = true
         };
 
         var result = await Mediator.Send(command);
 
         return result.Success 
-            ? OkResponse($"User {(request.IsApproved ? "approved" : "rejected")} successfully") 
+            ? OkResponse("User activated successfully") 
+            : ErrorResponse(result);
+    }
+
+    /// <summary>
+    /// Deactivate a user account (revoke approval + disable).
+    /// Used by admin to fully deactivate a user.
+    /// No request body needed — just provide user ID in the URL.
+    /// </summary>
+    /// <param name="id">User ID</param>
+    /// <returns>Success response</returns>
+    [HttpPut("{id}/deactivate")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public async Task<IActionResult> Deactivate(Guid id)
+    {
+        var command = new ApproveUserCommand
+        {
+            UserId = id,
+            IsApproved = false,
+            IsEnabled = false
+        };
+
+        var result = await Mediator.Send(command);
+
+        return result.Success 
+            ? OkResponse("User deactivated successfully") 
+            : ErrorResponse(result);
+    }
+
+    /// <summary>
+    /// Enable a user account (keep approved but re-enable).
+    /// Used by admin to re-enable a previously disabled user.
+    /// No request body needed — just provide user ID in the URL.
+    /// </summary>
+    /// <param name="id">User ID</param>
+    /// <returns>Success response</returns>
+    [HttpPut("{id}/enable")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public async Task<IActionResult> Enable(Guid id)
+    {
+        var command = new ToggleUserStatusCommand
+        {
+            UserId = id,
+            IsEnabled = true
+        };
+
+        var result = await Mediator.Send(command);
+
+        return result.Success 
+            ? OkResponse("User enabled successfully") 
+            : ErrorResponse(result);
+    }
+
+    /// <summary>
+    /// Disable a user account (keep approved but disable login).
+    /// Used by admin to temporarily disable a user without revoking approval.
+    /// No request body needed — just provide user ID in the URL.
+    /// </summary>
+    /// <param name="id">User ID</param>
+    /// <returns>Success response</returns>
+    [HttpPut("{id}/disable")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public async Task<IActionResult> Disable(Guid id)
+    {
+        var command = new ToggleUserStatusCommand
+        {
+            UserId = id,
+            IsEnabled = false
+        };
+
+        var result = await Mediator.Send(command);
+
+        return result.Success 
+            ? OkResponse("User disabled successfully") 
             : ErrorResponse(result);
     }
 
@@ -158,32 +232,6 @@ public class UsersController : BaseApiController
 
         return result.Success 
             ? OkResponse("User role updated successfully") 
-            : ErrorResponse(result);
-    }
-
-    /// <summary>
-    /// Enable or disable user account
-    /// </summary>
-    /// <param name="id">User ID</param>
-    /// <param name="request">Status update details</param>
-    /// <returns>Success response</returns>
-    [HttpPut("{id}/status")]
-    [ProducesResponseType(StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    public async Task<IActionResult> ToggleStatus(Guid id, [FromBody] ToggleUserStatusDto request)
-    {
-        var command = new ToggleUserStatusCommand
-        {
-            UserId = id,
-            IsEnabled = request.IsEnabled
-        };
-
-        var result = await Mediator.Send(command);
-
-        return result.Success 
-            ? OkResponse($"User {(request.IsEnabled ? "enabled" : "disabled")} successfully") 
             : ErrorResponse(result);
     }
 }

@@ -90,11 +90,14 @@ public static class DependencyInjection
         services.AddScoped<IRoleRepository, RoleRepository>();
         services.AddScoped<IPermissionRepository, PermissionRepository>();
         services.AddScoped<IOrderRepository, OrderRepository>();
+        services.AddScoped<IOrderItemRepository, OrderItemRepository>();
         services.AddScoped<IItemRepository, ItemRepository>();
         services.AddScoped<IColorRepository, ColorRepository>();
         services.AddScoped<ILocationRepository, LocationRepository>();
         services.AddScoped<IAuditLogRepository, AuditLogRepository>();
         services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
+        services.AddScoped<IInventoryRepository, InventoryRepository>();
+        services.AddScoped<IItemInventoryRepository, ItemInventoryRepository>();
 
         // Generic Repository
         services.AddScoped(typeof(IRepository<>), typeof(GenericRepository<>));

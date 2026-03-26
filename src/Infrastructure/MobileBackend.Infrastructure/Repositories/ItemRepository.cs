@@ -100,4 +100,43 @@ public class ItemRepository : GenericRepository<Item>, IItemRepository
             .Include(i => i.Color)  // ? Eager load color
             .FirstOrDefaultAsync(i => i.Id == id && !i.IsDeleted, cancellationToken);
     }
+
+    // Get items that exist in a specific inventory/section, with colors included
+    public async Task<IEnumerable<Item>> GetByInventoryIdAsync(Guid inventoryId, CancellationToken cancellationToken = default)
+    {
+        return await _dbSet
+            .Include(i => i.Color)
+            .Where(i => !i.IsDeleted && i.ItemInventories.Any(ii => ii.InventoryId == inventoryId && !ii.IsDeleted))
+            .ToListAsync(cancellationToken);
+    }
+
+    // DB-level paginated query with Color include and optional inventory filter
+    public async Task<(List<Item> Items, int TotalCount)> GetPagedWithColorsAsync(
+        int pageNumber,
+        int pageSize,
+        Guid? inventoryId = null,
+        CancellationToken cancellationToken = default)
+    {
+        IQueryable<Item> query = _dbSet
+            .Include(i => i.Color)
+            .Where(i => !i.IsDeleted);
+
+        // Filter by inventory if specified
+        if (inventoryId.HasValue)
+        {
+            query = query.Where(i => i.ItemInventories.Any(ii => ii.InventoryId == inventoryId.Value && !ii.IsDeleted));
+        }
+
+        // Order by name for consistent pagination
+        query = query.OrderBy(i => i.Name);
+
+        var totalCount = await query.CountAsync(cancellationToken);
+
+        var items = await query
+            .Skip((pageNumber - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync(cancellationToken);
+
+        return (items, totalCount);
+    }
 }

@@ -34,7 +34,7 @@ public class InventoriesController : BaseApiController
     }
 
     /// <summary>
-    /// Create a new inventory/warehouse
+    /// Create a new inventory/warehouse/section
     /// </summary>
     [HttpPost]
     public async Task<IActionResult> CreateInventory([FromBody] CreateInventoryDto dto)
@@ -44,7 +44,8 @@ public class InventoriesController : BaseApiController
             Name = dto.Name,
             Location = dto.Location,
             Description = dto.Description,
-            IsActive = dto.IsActive
+            IsActive = dto.IsActive,
+            LocationId = dto.LocationId
         };
 
         var result = await Mediator.Send(command);
@@ -85,7 +86,8 @@ public class InventoriesController : BaseApiController
             Name = dto.Name,
             Location = dto.Location,
             Description = dto.Description,
-            IsActive = dto.IsActive
+            IsActive = dto.IsActive,
+            LocationId = dto.LocationId
         };
 
         var result = await Mediator.Send(command);

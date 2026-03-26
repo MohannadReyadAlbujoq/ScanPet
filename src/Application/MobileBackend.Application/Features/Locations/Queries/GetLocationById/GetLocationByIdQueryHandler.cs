@@ -2,6 +2,7 @@ using MediatR;
 using Microsoft.Extensions.Logging;
 using MobileBackend.Application.Common.Constants;
 using MobileBackend.Application.Common.Handlers;
+using MobileBackend.Application.DTOs.Inventories;
 using MobileBackend.Application.DTOs.Locations;
 using MobileBackend.Application.Interfaces;
 using MobileBackend.Domain.Entities;
@@ -9,13 +10,14 @@ using MobileBackend.Domain.Entities;
 namespace MobileBackend.Application.Features.Locations.Queries.GetLocationById;
 
 /// <summary>
-/// Handler for getting a location by ID (with accurate order count)
+/// Handler for getting a location by ID (with sections/inventories detail)
 /// Uses BaseGetByIdHandler to eliminate code duplication
 /// </summary>
 public class GetLocationByIdQueryHandler : BaseGetByIdHandler<GetLocationByIdQuery, Location, LocationDto>
 {
     private readonly IUnitOfWork _unitOfWork;
     private int _orderCount = 0;
+    private List<Inventory> _sections = new();
 
     public GetLocationByIdQueryHandler(
         IUnitOfWork unitOfWork,
@@ -27,11 +29,10 @@ public class GetLocationByIdQueryHandler : BaseGetByIdHandler<GetLocationByIdQue
 
     protected override async Task<Location?> GetEntityByIdAsync(Guid id, CancellationToken cancellationToken)
     {
-        // Use optimized method with SQL aggregation ?
-        var (location, orderCount) = await _unitOfWork.Locations.GetByIdWithOrderCountAsync(id, cancellationToken);
+        var (location, orderCount, sections) = await _unitOfWork.Locations.GetByIdWithDetailsAsync(id, cancellationToken);
         
-        // Store order count for use in MapToDto
         _orderCount = orderCount;
+        _sections = sections;
         
         return location;
     }
@@ -47,7 +48,19 @@ public class GetLocationByIdQueryHandler : BaseGetByIdHandler<GetLocationByIdQue
             Country = entity.Country,
             PostalCode = entity.PostalCode,
             IsActive = entity.IsActive,
-            OrderCount = _orderCount,  // ? Accurate count from SQL!
+            OrderCount = _orderCount,
+            SectionCount = _sections.Count,
+            Sections = _sections.Select(s => new InventoryDto
+            {
+                Id = s.Id,
+                Name = s.Name,
+                Location = s.Location,
+                Description = s.Description,
+                IsActive = s.IsActive,
+                LocationId = s.LocationId,
+                CreatedAt = s.CreatedAt,
+                UpdatedAt = s.UpdatedAt
+            }).ToList(),
             CreatedAt = entity.CreatedAt,
             UpdatedAt = entity.UpdatedAt
         };

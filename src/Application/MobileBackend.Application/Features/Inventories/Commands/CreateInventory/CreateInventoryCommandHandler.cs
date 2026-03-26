@@ -33,6 +33,7 @@ public class CreateInventoryCommandHandler : BaseCreateHandler<CreateInventoryCo
             Location = command.Location,
             Description = command.Description,
             IsActive = command.IsActive,
+            LocationId = command.LocationId,
             IsDeleted = false
         };
     }
@@ -47,7 +48,8 @@ public class CreateInventoryCommandHandler : BaseCreateHandler<CreateInventoryCo
     protected override string GetAuditAction() => AuditActions.InventoryCreated;
 
     protected override string GetAuditMessage(Inventory entity)
-        => $"Created inventory: {entity.Name} at {entity.Location}";
+        => $"Created inventory: {entity.Name} at {entity.Location ?? "standalone"}" +
+           (entity.LocationId.HasValue ? $" (section of location {entity.LocationId})" : "");
 
     // Override uniqueness validation
     protected override async Task<Result<Guid>> ValidateUniquenessAsync(
@@ -59,6 +61,17 @@ public class CreateInventoryCommandHandler : BaseCreateHandler<CreateInventoryCo
         {
             return Result<Guid>.FailureResult(ErrorMessages.AlreadyExists("Inventory", "name"), 409);
         }
+
+        // Validate LocationId if provided
+        if (command.LocationId.HasValue)
+        {
+            var location = await UnitOfWork.Locations.GetByIdAsync(command.LocationId.Value, cancellationToken);
+            if (location == null)
+            {
+                return Result<Guid>.FailureResult(ErrorMessages.NotFound("Location"), 404);
+            }
+        }
+
         return Result<Guid>.SuccessResult(Guid.Empty);
     }
 }

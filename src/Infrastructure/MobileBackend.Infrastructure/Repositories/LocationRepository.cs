@@ -30,7 +30,7 @@ public class LocationRepository : GenericRepository<Location>, ILocationReposito
         return !await _dbSet.AnyAsync(l => l.Name == name, cancellationToken);
     }
 
-    // Get all locations with order counts (efficient - single query with aggregation)
+    // Get all locations with order counts (backward compat)
     public async Task<IEnumerable<(Location Location, int OrderCount)>> GetAllWithOrderCountsAsync(CancellationToken cancellationToken = default)
     {
         var results = await _dbSet
@@ -38,14 +38,14 @@ public class LocationRepository : GenericRepository<Location>, ILocationReposito
             .Select(l => new
             {
                 Location = l,
-                OrderCount = l.Orders.Count(o => !o.IsDeleted)  // ? Efficient SQL COUNT
+                OrderCount = l.Orders.Count(o => !o.IsDeleted)
             })
             .ToListAsync(cancellationToken);
 
         return results.Select(r => (r.Location, r.OrderCount));
     }
 
-    // Get single location with order count
+    // Get single location with order count (backward compat)
     public async Task<(Location? Location, int OrderCount)> GetByIdWithOrderCountAsync(Guid id, CancellationToken cancellationToken = default)
     {
         var result = await _dbSet
@@ -53,7 +53,7 @@ public class LocationRepository : GenericRepository<Location>, ILocationReposito
             .Select(l => new
             {
                 Location = l,
-                OrderCount = l.Orders.Count(o => !o.IsDeleted)  // ? Efficient SQL COUNT
+                OrderCount = l.Orders.Count(o => !o.IsDeleted)
             })
             .FirstOrDefaultAsync(cancellationToken);
 
@@ -61,5 +61,38 @@ public class LocationRepository : GenericRepository<Location>, ILocationReposito
             return (null, 0);
 
         return (result.Location, result.OrderCount);
+    }
+
+    // Get all locations with order counts AND section counts
+    public async Task<IEnumerable<(Location Location, int OrderCount, int SectionCount)>> GetAllWithCountsAsync(CancellationToken cancellationToken = default)
+    {
+        var results = await _dbSet
+            .Where(l => !l.IsDeleted)
+            .Select(l => new
+            {
+                Location = l,
+                OrderCount = l.Orders.Count(o => !o.IsDeleted),
+                SectionCount = l.Inventories.Count(i => !i.IsDeleted)
+            })
+            .ToListAsync(cancellationToken);
+
+        return results.Select(r => (r.Location, r.OrderCount, r.SectionCount));
+    }
+
+    // Get single location with order count + full section details
+    public async Task<(Location? Location, int OrderCount, List<Inventory> Sections)> GetByIdWithDetailsAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        var location = await _dbSet
+            .Include(l => l.Inventories.Where(i => !i.IsDeleted))
+            .Where(l => l.Id == id && !l.IsDeleted)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (location == null)
+            return (null, 0, new List<Inventory>());
+
+        var orderCount = await _context.Set<Order>()
+            .CountAsync(o => o.LocationId == id && !o.IsDeleted, cancellationToken);
+
+        return (location, orderCount, location.Inventories.ToList());
     }
 }

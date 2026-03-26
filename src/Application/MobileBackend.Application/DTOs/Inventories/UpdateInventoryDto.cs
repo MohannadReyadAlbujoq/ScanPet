@@ -1,7 +1,7 @@
 namespace MobileBackend.Application.DTOs.Inventories;
 
 /// <summary>
-/// DTO for updating an inventory/warehouse
+/// DTO for updating an inventory/warehouse/section
 /// </summary>
 public class UpdateInventoryDto
 {
@@ -9,4 +9,9 @@ public class UpdateInventoryDto
     public string? Location { get; set; }
     public string? Description { get; set; }
     public bool IsActive { get; set; }
+    
+    /// <summary>
+    /// Optional parent Location ID — makes this inventory a section within a Location
+    /// </summary>
+    public Guid? LocationId { get; set; }
 }

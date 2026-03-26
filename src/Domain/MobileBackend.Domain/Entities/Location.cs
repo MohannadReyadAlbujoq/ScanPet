@@ -4,7 +4,7 @@ namespace MobileBackend.Domain.Entities;
 
 /// <summary>
 /// Represents order delivery/shipping locations
-/// Separate from Inventory which represents warehouses/storage
+/// Can contain Inventory sections (warehouses/storage within this location)
 /// </summary>
 public class Location : BaseEntity, ISoftDelete
 {
@@ -25,4 +25,9 @@ public class Location : BaseEntity, ISoftDelete
     /// Orders delivered to this location
     /// </summary>
     public virtual ICollection<Order> Orders { get; set; } = new List<Order>();
+    
+    /// <summary>
+    /// Inventory sections/warehouses within this location
+    /// </summary>
+    public virtual ICollection<Inventory> Inventories { get; set; } = new List<Inventory>();
 }

@@ -19,4 +19,10 @@ public interface IItemRepository : IRepository<Item>
     Task<bool> IsSkuAvailableAsync(string sku, CancellationToken cancellationToken = default);
     Task<IEnumerable<Item>> GetAllWithColorsAsync(CancellationToken cancellationToken = default);
     Task<Item?> GetByIdWithColorAsync(Guid id, CancellationToken cancellationToken = default);
+    Task<IEnumerable<Item>> GetByInventoryIdAsync(Guid inventoryId, CancellationToken cancellationToken = default);
+    Task<(List<Item> Items, int TotalCount)> GetPagedWithColorsAsync(
+        int pageNumber,
+        int pageSize,
+        Guid? inventoryId = null,
+        CancellationToken cancellationToken = default);
 }

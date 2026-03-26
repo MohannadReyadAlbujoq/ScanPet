@@ -1,7 +1,7 @@
 namespace MobileBackend.Application.DTOs.Inventories;
 
 /// <summary>
-/// DTO for Inventory (Warehouse) information
+/// DTO for Inventory (Warehouse/Section) information
 /// </summary>
 public class InventoryDto
 {
@@ -10,7 +10,18 @@ public class InventoryDto
     public string? Location { get; set; }
     public string? Description { get; set; }
     public bool IsActive { get; set; }
-    public int TotalItems { get; set; } // Count of different items stored
+    public int TotalItems { get; set; }
+    
+    /// <summary>
+    /// Parent Location ID (null if standalone inventory)
+    /// </summary>
+    public Guid? LocationId { get; set; }
+    
+    /// <summary>
+    /// Parent Location name (only in responses)
+    /// </summary>
+    public string? LocationName { get; set; }
+    
     public DateTime CreatedAt { get; set; }
     public DateTime? UpdatedAt { get; set; }
 }

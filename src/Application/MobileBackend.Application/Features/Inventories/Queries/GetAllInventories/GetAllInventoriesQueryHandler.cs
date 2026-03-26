@@ -46,6 +46,8 @@ public class GetAllInventoriesQueryHandler : BaseGetAllHandler<GetAllInventories
             Description = entity.Description,
             IsActive = entity.IsActive,
             TotalItems = _itemCounts.GetValueOrDefault(entity.Id),  // ? Use cached count
+            LocationId = entity.LocationId,
+            LocationName = entity.ParentLocation?.Name,
             CreatedAt = entity.CreatedAt,
             UpdatedAt = entity.UpdatedAt
         };
