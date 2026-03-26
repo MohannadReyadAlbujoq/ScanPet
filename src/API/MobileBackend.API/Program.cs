@@ -238,8 +238,11 @@ try
         });
     }
 
-    // 4. HTTPS Redirection
-    app.UseHttpsRedirection();
+    // 4. HTTPS Redirection (skip in production — Render/Railway handle TLS at the proxy)
+    if (app.Environment.IsDevelopment())
+    {
+        app.UseHttpsRedirection();
+    }
 
     // 5. CORS
     app.UseCors("AllowAll");

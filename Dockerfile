@@ -34,17 +34,13 @@ RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
 # Copy published application
 COPY --from=publish /app/publish .
 
-# Expose ports
-EXPOSE 8080
-EXPOSE 8081
+# Expose port (Render sets PORT env var, default 10000)
+EXPOSE 10000
 
 # Environment variables
-ENV ASPNETCORE_URLS=http://+:8080
+# Render sets PORT dynamically — use it for ASPNETCORE_URLS
 ENV ASPNETCORE_ENVIRONMENT=Production
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-    CMD curl --fail http://localhost:8080/health || exit 1
-
 # Run the application
-ENTRYPOINT ["dotnet", "MobileBackend.API.dll"]
+# Render requires the app to listen on 0.0.0.0:$PORT
+ENTRYPOINT ["sh", "-c", "dotnet MobileBackend.API.dll --urls http://0.0.0.0:${PORT:-10000}"]
