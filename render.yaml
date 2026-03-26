@@ -1,0 +1,72 @@
+services:
+  - type: web
+    name: scanpet-api
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    plan: free
+    region: oregon
+    branch: main
+    autoDeploy: true
+    healthCheckPath: /health
+
+    envVars:
+      - key: ASPNETCORE_ENVIRONMENT
+        value: Production
+
+      - key: PORT
+        value: 10000
+
+      - key: DatabaseProvider
+        value: PostgreSQL
+
+      - key: ConnectionStrings__DefaultConnection
+        sync: false
+
+      - key: JwtSettings__PrivateKey
+        sync: false
+
+      - key: JwtSettings__PublicKey
+        sync: false
+
+      - key: JwtSettings__Issuer
+        value: MobileBackendAPI
+
+      - key: JwtSettings__Audience
+        value: MobileApp
+
+      - key: JwtSettings__AccessTokenExpiryMinutes
+        value: 15
+
+      - key: JwtSettings__RefreshTokenExpiryDays
+        value: 7
+
+      - key: SecuritySettings__EnableBitManipulation
+        value: true
+
+      - key: SecuritySettings__EnableRsaEncryption
+        value: true
+
+      - key: SecuritySettings__MaxLoginAttempts
+        value: 5
+
+      - key: SecuritySettings__LockoutDurationMinutes
+        value: 15
+
+      - key: ApiSettings__EnableSwagger
+        value: true
+
+      - key: ApiSettings__EnableRateLimiting
+        value: true
+
+      - key: ApiSettings__RateLimitPerMinute
+        value: 100
+
+      - key: Cors__AllowedOrigins__0
+        value: https://scanpet.vercel.app
+
+      - key: Email__SmtpUsername
+        sync: false
+
+      - key: Email__SmtpPassword
+        sync: false
