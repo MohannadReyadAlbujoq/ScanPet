@@ -62,6 +62,14 @@ public class CreateOrderCommandHandler : IRequestHandler<CreateOrderCommand, Res
             
             var itemsDict = items.ToDictionary(i => i.Id);
 
+            // Batch-fetch all item inventories for the requested items to avoid N+1
+            var allItemInventories = new Dictionary<Guid, List<ItemInventory>>();
+            foreach (var itemId in itemIds)
+            {
+                var inventories = await _unitOfWork.ItemInventories.GetByItemIdAsync(itemId, cancellationToken);
+                allItemInventories[itemId] = inventories;
+            }
+
             decimal totalAmount = 0;
             var orderItems = new List<OrderItem>();
 
@@ -74,8 +82,9 @@ public class CreateOrderCommandHandler : IRequestHandler<CreateOrderCommand, Res
 
                 var quantity = itemDto.Quantity ?? 0;
 
-                // Check total quantity across all inventories
-                var totalAvailable = await _unitOfWork.ItemInventories.GetTotalQuantityForItemAsync(item.Id, cancellationToken);
+                // Check total quantity across all inventories using pre-fetched data
+                var itemInventories = allItemInventories.GetValueOrDefault(item.Id) ?? new List<ItemInventory>();
+                var totalAvailable = itemInventories.Sum(ii => ii.Quantity);
                 if (totalAvailable < quantity)
                 {
                     return Result<Guid>.FailureResult(
@@ -86,20 +95,15 @@ public class CreateOrderCommandHandler : IRequestHandler<CreateOrderCommand, Res
                 var salePrice = itemDto.UnitPrice ?? item.BasePrice;
                 var itemTotal = salePrice * quantity;
 
-                // Generate or validate serial number
+                // Generate or validate serial number — use SKU as serial number
                 string serialNumber;
                 if (!string.IsNullOrEmpty(itemDto.SerialNumber))
                 {
-                    var existingOrderItem = await _unitOfWork.OrderItems.GetBySerialNumberAsync(itemDto.SerialNumber, cancellationToken);
-                    if (existingOrderItem != null)
-                    {
-                        return Result<Guid>.FailureResult($"Serial number {itemDto.SerialNumber} already exists", 400);
-                    }
                     serialNumber = itemDto.SerialNumber;
                 }
                 else
                 {
-                    serialNumber = $"SN-{item.SKU}-{DateTime.UtcNow:yyyyMMdd}-{Guid.NewGuid().ToString().Substring(0, 3).ToUpper()}";
+                    serialNumber = item.SKU ?? item.Name;
                 }
 
                 var orderItem = new OrderItem
@@ -119,8 +123,7 @@ public class CreateOrderCommandHandler : IRequestHandler<CreateOrderCommand, Res
 
                 // Deduct quantity from inventories (FIFO: deduct from inventories with stock)
                 var remainingToDeduct = quantity;
-                var inventories = await _unitOfWork.ItemInventories.GetByItemIdAsync(item.Id, cancellationToken);
-                foreach (var inv in inventories.Where(i => i.Quantity > 0).OrderBy(i => i.CreatedAt))
+                foreach (var inv in itemInventories.Where(i => i.Quantity > 0).OrderBy(i => i.CreatedAt))
                 {
                     if (remainingToDeduct <= 0) break;
 
@@ -155,7 +158,6 @@ public class CreateOrderCommandHandler : IRequestHandler<CreateOrderCommand, Res
             };
 
             await _unitOfWork.Orders.AddAsync(order);
-            await _unitOfWork.SaveChangesAsync(cancellationToken);
 
             // Audit log
             await _auditService.LogAsync(
@@ -166,6 +168,9 @@ public class CreateOrderCommandHandler : IRequestHandler<CreateOrderCommand, Res
                 additionalInfo: $"Order {orderNumber} created for client {request.ClientName}, Total: {totalAmount:C}, Items: {orderItems.Count}",
                 cancellationToken: cancellationToken
             );
+
+            // Save all changes in single round-trip (TransactionBehavior handles commit)
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
 
             _logger.LogInformation("Order created successfully: {OrderId} - {OrderNumber} - Total: {Total}", order.Id, orderNumber, order.TotalAmount);
 

@@ -7,7 +7,7 @@ public class OrderItem : BaseEntity, ISoftDelete
 {
     public Guid OrderId { get; set; }
     public Guid ItemId { get; set; }
-    public string SerialNumber { get; set; } = string.Empty; // Auto-generated: SN-ITEM123-20250101-001
+    public string SerialNumber { get; set; } = string.Empty; // Uses Item SKU
     public int Quantity { get; set; } = 1;
     public decimal SalePrice { get; set; }
     public OrderItemStatus Status { get; set; } = OrderItemStatus.Successful;

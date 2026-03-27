@@ -34,6 +34,7 @@ public class ColorRepository : GenericRepository<Color>, IColorRepository
     public async Task<IEnumerable<(Color Color, int ItemCount)>> GetAllWithItemCountsAsync(CancellationToken cancellationToken = default)
     {
         var results = await _dbSet
+            .AsNoTracking()
             .Where(c => !c.IsDeleted)
             .Select(c => new
             {
@@ -49,6 +50,7 @@ public class ColorRepository : GenericRepository<Color>, IColorRepository
     public async Task<(Color? Color, int ItemCount)> GetByIdWithItemCountAsync(Guid id, CancellationToken cancellationToken = default)
     {
         var result = await _dbSet
+            .AsNoTracking()
             .Where(c => c.Id == id && !c.IsDeleted)
             .Select(c => new
             {

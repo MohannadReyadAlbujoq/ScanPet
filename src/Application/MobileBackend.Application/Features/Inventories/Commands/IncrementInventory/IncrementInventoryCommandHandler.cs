@@ -81,8 +81,6 @@ public class IncrementInventoryCommandHandler : IRequestHandler<IncrementInvento
                 await _unitOfWork.ItemInventories.AddAsync(itemInventory, cancellationToken);
             }
 
-            await _unitOfWork.SaveChangesAsync(cancellationToken);
-
             // Audit
             await _auditService.LogAsync(
                 action: AuditActions.Update,
@@ -93,6 +91,9 @@ public class IncrementInventoryCommandHandler : IRequestHandler<IncrementInvento
                                (request.Reason != null ? $" - Reason: {request.Reason}" : ""),
                 cancellationToken: cancellationToken
             );
+
+            // Save all changes in single round-trip (TransactionBehavior handles commit)
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
 
             _logger.LogInformation("Inventory incremented: +{Qty} of {ItemName} at {InventoryName} ({OldQty} -> {NewQty})",
                 request.Quantity, item.Name, inventory.Name, oldQuantity, itemInventory.Quantity);

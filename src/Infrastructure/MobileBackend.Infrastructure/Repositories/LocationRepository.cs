@@ -67,6 +67,7 @@ public class LocationRepository : GenericRepository<Location>, ILocationReposito
     public async Task<IEnumerable<(Location Location, int OrderCount, int SectionCount)>> GetAllWithCountsAsync(CancellationToken cancellationToken = default)
     {
         var results = await _dbSet
+            .AsNoTracking()
             .Where(l => !l.IsDeleted)
             .Select(l => new
             {

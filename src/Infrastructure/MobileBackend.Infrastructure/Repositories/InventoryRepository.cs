@@ -45,6 +45,7 @@ public class InventoryRepository : GenericRepository<Inventory>, IInventoryRepos
     public async Task<IEnumerable<(Inventory Inventory, int ItemCount)>> GetAllWithItemCountsAsync(CancellationToken cancellationToken = default)
     {
         var results = await _dbSet
+            .AsNoTracking()
             .Include(i => i.ParentLocation)
             .Where(i => !i.IsDeleted)
             .Select(i => new
@@ -64,6 +65,7 @@ public class InventoryRepository : GenericRepository<Inventory>, IInventoryRepos
     public async Task<(Inventory? Inventory, int ItemCount)> GetByIdWithItemCountAsync(Guid id, CancellationToken cancellationToken = default)
     {
         var result = await _dbSet
+            .AsNoTracking()
             .Include(i => i.ParentLocation)
             .Where(i => i.Id == id && !i.IsDeleted)
             .Select(i => new

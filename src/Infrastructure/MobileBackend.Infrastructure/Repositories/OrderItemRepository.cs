@@ -15,14 +15,16 @@ public class OrderItemRepository : GenericRepository<OrderItem>, IOrderItemRepos
     }
 
     /// <summary>
-    /// Get order item by serial number
+    /// Get order item by serial number (SKU). Returns the first unrefunded item matching the SKU.
     /// </summary>
     public async Task<OrderItem?> GetBySerialNumberAsync(string serialNumber, CancellationToken cancellationToken = default)
     {
         return await _dbSet
             .Include(oi => oi.Order)
             .Include(oi => oi.Item)
-            .FirstOrDefaultAsync(oi => oi.SerialNumber == serialNumber && !oi.IsDeleted, cancellationToken);
+            .Where(oi => oi.SerialNumber == serialNumber && !oi.IsDeleted)
+            .OrderByDescending(oi => oi.CreatedAt)
+            .FirstOrDefaultAsync(cancellationToken);
     }
 
     /// <summary>

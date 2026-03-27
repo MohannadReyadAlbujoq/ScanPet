@@ -53,7 +53,7 @@ public class RefundOrderItemCommandHandlerTests : TestBase
     public async Task Handle_ValidRefund_ShouldRefundOrderItemAndRestoreInventory()
     {
         // Arrange
-        var serialNumber = "SN-ITEM123-20250101-001";
+        var serialNumber = "PF-001";
         var refundQuantity = 2;
         var itemPrice = 100m;
         var itemId = Guid.NewGuid();
@@ -134,7 +134,7 @@ public class RefundOrderItemCommandHandlerTests : TestBase
     public async Task Handle_OrderItemNotFound_ShouldReturnFailure()
     {
         // Arrange
-        var serialNumber = "SN-NOTFOUND-001";
+        var serialNumber = "NOTFOUND-SKU";
         var command = new RefundOrderItemCommand
         {
             SerialNumber = serialNumber,
@@ -160,7 +160,7 @@ public class RefundOrderItemCommandHandlerTests : TestBase
     public async Task Handle_AlreadyRefunded_ShouldReturnFailure()
     {
         // Arrange
-        var serialNumber = "SN-ITEM123-001";
+        var serialNumber = "PF-001";
         var command = new RefundOrderItemCommand
         {
             SerialNumber = serialNumber,
@@ -192,7 +192,7 @@ public class RefundOrderItemCommandHandlerTests : TestBase
     public async Task Handle_DeletedOrderItem_ShouldReturnFailure()
     {
         // Arrange
-        var serialNumber = "SN-DELETED-001";
+        var serialNumber = "PF-DELETED";
         var command = new RefundOrderItemCommand
         {
             SerialNumber = serialNumber,
@@ -224,7 +224,7 @@ public class RefundOrderItemCommandHandlerTests : TestBase
     public async Task Handle_RefundQuantityExceedsAvailable_ShouldReturnFailure()
     {
         // Arrange
-        var serialNumber = "SN-ITEM123-001";
+        var serialNumber = "PF-001";
         var command = new RefundOrderItemCommand
         {
             SerialNumber = serialNumber,
@@ -257,7 +257,7 @@ public class RefundOrderItemCommandHandlerTests : TestBase
     public async Task Handle_ZeroRefundQuantity_ShouldReturnFailure()
     {
         // Arrange
-        var serialNumber = "SN-ITEM123-001";
+        var serialNumber = "PF-001";
         var command = new RefundOrderItemCommand
         {
             SerialNumber = serialNumber,
@@ -278,7 +278,7 @@ public class RefundOrderItemCommandHandlerTests : TestBase
     public async Task Handle_DatabaseError_ShouldReturnFailure()
     {
         // Arrange
-        var serialNumber = "SN-ITEM123-001";
+        var serialNumber = "PF-001";
         var command = new RefundOrderItemCommand
         {
             SerialNumber = serialNumber,
@@ -303,7 +303,7 @@ public class RefundOrderItemCommandHandlerTests : TestBase
     public async Task Handle_InactiveInventory_ShouldReturnFailure()
     {
         // Arrange
-        var serialNumber = "SN-ITEM123-001";
+        var serialNumber = "PF-001";
         var inventoryId = Guid.NewGuid();
         var command = new RefundOrderItemCommand
         {

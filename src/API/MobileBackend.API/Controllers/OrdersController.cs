@@ -10,7 +10,6 @@ using MobileBackend.Application.Features.Orders.Commands.CreateOrder;
 using MobileBackend.Application.Features.Orders.Commands.RefundOrderItem;
 using MobileBackend.Application.Features.Orders.Queries.GetAllOrders;
 using MobileBackend.Application.Features.Orders.Queries.GetOrderById;
-using MobileBackend.API.Filters;
 
 namespace MobileBackend.API.Controllers;
 
@@ -18,10 +17,7 @@ namespace MobileBackend.API.Controllers;
 /// Order management controller
 /// Handles order CRUD and status operations
 /// </summary>
-[ApiController]
 [Route("api/[controller]")]
-[Authorize]
-[Produces("application/json")]
 public class OrdersController : BaseApiController
 {
     public OrdersController(IMediator mediator, ILogger<OrdersController> logger)
@@ -144,9 +140,9 @@ public class OrdersController : BaseApiController
     }
 
     /// <summary>
-    /// Refund an order item by serial number
+    /// Refund an order item by SKU
     /// </summary>
-    /// <param name="serialNumber">Serial number of the order item to refund</param>
+    /// <param name="serialNumber">SKU of the item to refund (e.g., PF-001)</param>
     /// <param name="request">Refund details including quantity and reason</param>
     /// <returns>Result of refund operation</returns>
     [HttpPost("refund/{serialNumber}")]
@@ -169,25 +165,4 @@ public class OrdersController : BaseApiController
             ? OkResponse("Order item refunded successfully") 
             : StatusCode(result.StatusCode, new { success = false, message = result.ErrorMessage });
     }
-}
-
-/// <summary>
-/// Request model for refunding an order item
-/// </summary>
-public class RefundOrderItemRequest
-{
-    /// <summary>
-    /// Quantity to refund (must be greater than 0 and not exceed ordered quantity)
-    /// </summary>
-    public int RefundQuantity { get; set; }
-
-    /// <summary>
-    /// Optional reason for the refund
-    /// </summary>
-    public string? RefundReason { get; set; }
-    
-    /// <summary>
-    /// Inventory ID (warehouse) where the refunded items should be returned to
-    /// </summary>
-    public Guid RefundToInventoryId { get; set; }
 }

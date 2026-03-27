@@ -88,8 +88,6 @@ public class TransferInventoryCommandHandler : IRequestHandler<TransferInventory
                 return Result<bool>.FailureResult("Failed to transfer inventory. Insufficient stock at source or invalid operation.", 400);
             }
 
-            await _unitOfWork.SaveChangesAsync(cancellationToken);
-
             // Audit log
             var auditInfo = $"Transferred {request.Quantity} units of {item.Name} from {fromInventory.Name} to {toInventory.Name}";
             if (!string.IsNullOrWhiteSpace(request.Reason))
@@ -105,6 +103,9 @@ public class TransferInventoryCommandHandler : IRequestHandler<TransferInventory
                 additionalInfo: auditInfo,
                 cancellationToken: cancellationToken
             );
+
+            // Save all changes in single round-trip (TransactionBehavior handles commit)
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
 
             _logger.LogInformation("Inventory transferred: {Quantity} of {ItemName} from {FromInventory} to {ToInventory}",
                 request.Quantity, item.Name, fromInventory.Name, toInventory.Name);

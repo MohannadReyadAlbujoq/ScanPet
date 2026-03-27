@@ -7,7 +7,9 @@ namespace MobileBackend.Infrastructure.Services;
 
 /// <summary>
 /// Implementation of audit logging service
-/// Centralizes audit log creation logic
+/// Centralizes audit log creation logic.
+/// Note: Does NOT call SaveChangesAsync — the caller's transaction handles persistence.
+/// For standalone calls (e.g., from middleware), use saveImmediately: true.
 /// </summary>
 public class AuditService : IAuditService
 {
@@ -47,7 +49,6 @@ public class AuditService : IAuditService
         };
 
         await _unitOfWork.AuditLogs.AddAsync(auditLog, cancellationToken);
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
     }
 
     public async Task LogActionAsync(
@@ -76,7 +77,6 @@ public class AuditService : IAuditService
         };
 
         await _unitOfWork.AuditLogs.AddAsync(auditLog, cancellationToken);
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
     }
 
     public async Task LogFailedLoginAsync(

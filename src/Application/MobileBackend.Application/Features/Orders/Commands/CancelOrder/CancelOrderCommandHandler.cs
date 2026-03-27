@@ -45,41 +45,34 @@ public class CancelOrderCommandHandler : IRequestHandler<CancelOrderCommand, Res
                 return Result<bool>.FailureResult("Order is already cancelled", 400);
             }
 
-            // ? FIX N+1: Fetch all items in single query before loop
+            // Restore item quantities to inventories
             if (order.OrderItems != null && order.OrderItems.Any())
             {
                 var itemIds = order.OrderItems.Select(oi => oi.ItemId).Distinct().ToList();
-                var items = await _unitOfWork.Items.FindAsync(
-                    i => itemIds.Contains(i.Id), 
-                    cancellationToken);
-                
-                var itemsDict = items.ToDictionary(i => i.Id);
 
-                // Restore item quantities to inventories
+                // Batch-fetch all item inventories to avoid N+1
+                var allItemInventories = new Dictionary<Guid, List<Domain.Entities.ItemInventory>>();
+                foreach (var itemId in itemIds)
+                {
+                    var inventories = await _unitOfWork.ItemInventories.GetByItemIdAsync(itemId, cancellationToken);
+                    allItemInventories[itemId] = inventories;
+                }
+
                 foreach (var orderItem in order.OrderItems)
                 {
-                    if (itemsDict.TryGetValue(orderItem.ItemId, out var item))
+                    var inventories = allItemInventories.GetValueOrDefault(orderItem.ItemId);
+                    var targetInventory = inventories?.FirstOrDefault(i => i.Inventory != null && i.Inventory.IsActive);
+                    
+                    if (targetInventory != null)
                     {
-                        // Restore to the first available active inventory for this item
-                        var inventories = await _unitOfWork.ItemInventories.GetByItemIdAsync(orderItem.ItemId, cancellationToken);
-                        var targetInventory = inventories.FirstOrDefault(i => i.Inventory != null && i.Inventory.IsActive);
-                        
-                        if (targetInventory != null)
-                        {
-                            targetInventory.Quantity += orderItem.Quantity;
-                            targetInventory.UpdatedAt = DateTime.UtcNow;
-                            targetInventory.UpdatedBy = _currentUserService.UserId;
-                            _unitOfWork.ItemInventories.Update(targetInventory);
-                        }
-                        else
-                        {
-                            _logger.LogWarning("No active inventory found for item {ItemId} when cancelling order {OrderId}",
-                                orderItem.ItemId, order.Id);
-                        }
+                        targetInventory.Quantity += orderItem.Quantity;
+                        targetInventory.UpdatedAt = DateTime.UtcNow;
+                        targetInventory.UpdatedBy = _currentUserService.UserId;
+                        _unitOfWork.ItemInventories.Update(targetInventory);
                     }
                     else
                     {
-                        _logger.LogWarning("Item {ItemId} not found when cancelling order {OrderId}", 
+                        _logger.LogWarning("No active inventory found for item {ItemId} when cancelling order {OrderId}",
                             orderItem.ItemId, order.Id);
                     }
                 }
@@ -92,7 +85,6 @@ public class CancelOrderCommandHandler : IRequestHandler<CancelOrderCommand, Res
             order.UpdatedAt = DateTime.UtcNow;
 
             _unitOfWork.Orders.Update(order);
-            await _unitOfWork.SaveChangesAsync(cancellationToken);
 
             // Audit log
             await _auditService.LogAsync(
@@ -103,6 +95,9 @@ public class CancelOrderCommandHandler : IRequestHandler<CancelOrderCommand, Res
                 additionalInfo: $"Order {order.OrderNumber} cancelled. Reason: {request.CancellationReason}",
                 cancellationToken: cancellationToken
             );
+
+            // Save all changes in single round-trip (TransactionBehavior handles commit)
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
 
             _logger.LogInformation("Order cancelled successfully: {OrderId} - {OrderNumber}", order.Id, order.OrderNumber);
 

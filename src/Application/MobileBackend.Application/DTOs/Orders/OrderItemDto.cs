@@ -57,7 +57,7 @@ public class OrderItemDto
     public DateTime? CreatedAt { get; set; }
 
     /// <summary>
-    /// Serial number for the order item (optional - will be auto-generated if not provided)
+    /// Serial number for the order item — uses the Item SKU
     /// </summary>
     public string? SerialNumber { get; set; }
 }

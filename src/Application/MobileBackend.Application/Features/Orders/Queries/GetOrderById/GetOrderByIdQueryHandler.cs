@@ -49,11 +49,12 @@ public class GetOrderByIdQueryHandler : BaseGetByIdHandler<GetOrderByIdQuery, Or
                 OrderId = oi.OrderId,
                 ItemId = oi.ItemId,
                 ItemName = oi.Item?.Name,
+                SerialNumber = oi.SerialNumber,
                 Quantity = oi.Quantity,
-                UnitPrice = oi.SalePrice,  // Map SalePrice to UnitPrice in DTO
-                TotalPrice = oi.SalePrice * oi.Quantity,  // Calculate total
-                Status = (int)oi.Status,  // Cast enum to int
-                StatusName = oi.Status.ToString()  // Add status name
+                UnitPrice = oi.SalePrice,
+                TotalPrice = oi.SalePrice * oi.Quantity,
+                Status = (int)oi.Status,
+                StatusName = oi.Status.ToString()
             }).ToList(),
             CreatedAt = entity.CreatedAt,
             UpdatedAt = entity.UpdatedAt

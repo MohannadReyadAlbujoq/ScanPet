@@ -60,6 +60,9 @@ public class EnhancedLoggingMiddleware
 
             stopwatch.Stop();
 
+            // Reset stream position before copying back to original stream
+            responseBody.Seek(0, SeekOrigin.Begin);
+
             // Copy response back to original stream
             await responseBody.CopyToAsync(originalBodyStream);
 

@@ -15,7 +15,6 @@ namespace MobileBackend.API.Controllers;
 /// Item management controller
 /// Handles item CRUD operations
 /// </summary>
-[ApiController]
 [Route("api/[controller]")]
 public class ItemsController : BaseApiController
 {

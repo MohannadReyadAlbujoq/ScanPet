@@ -120,9 +120,6 @@ public class RefundOrderItemCommandHandler : IRequestHandler<RefundOrderItemComm
             // Update order item
             _unitOfWork.OrderItems.Update(orderItem);
 
-            // Save all changes in transaction
-            await _unitOfWork.SaveChangesAsync(cancellationToken);
-
             // Audit log for order item refund
             await _auditService.LogAsync(
                 action: AuditActions.OrderItemRefunded,
@@ -146,6 +143,9 @@ public class RefundOrderItemCommandHandler : IRequestHandler<RefundOrderItemComm
                                $"to warehouse {inventory.Name} due to refund of {request.SerialNumber}",
                 cancellationToken: cancellationToken
             );
+
+            // Save all changes in single round-trip (TransactionBehavior handles commit)
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
 
             _logger.LogInformation(
                 "Order item {SerialNumber} refunded successfully. " +

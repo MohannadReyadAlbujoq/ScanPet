@@ -103,8 +103,6 @@ public class SetItemInventoryCommandHandler : IRequestHandler<SetItemInventoryCo
                 _logger.LogInformation("Created item inventory: Item {ItemName} at {InventoryName}", item.Name, inventory.Name);
             }
 
-            await _unitOfWork.SaveChangesAsync(cancellationToken);
-
             // Audit log
             await _auditService.LogAsync(
                 action: isNew ? AuditActions.Create : AuditActions.Update,
@@ -114,6 +112,9 @@ public class SetItemInventoryCommandHandler : IRequestHandler<SetItemInventoryCo
                 additionalInfo: $"{(isNew ? "Created" : "Updated")} item inventory: {item.Name} at {inventory.Name}, Quantity: {request.Quantity}",
                 cancellationToken: cancellationToken
             );
+
+            // Save all changes in single round-trip (TransactionBehavior handles commit)
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
 
             var dto = new ItemInventoryDto
             {

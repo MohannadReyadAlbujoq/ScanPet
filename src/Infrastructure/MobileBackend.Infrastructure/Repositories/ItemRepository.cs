@@ -123,6 +123,7 @@ public class ItemRepository : GenericRepository<Item>, IItemRepository
         CancellationToken cancellationToken = default)
     {
         IQueryable<Item> query = _dbSet
+            .AsNoTracking()
             .Include(i => i.Color)
             .Where(i => !i.IsDeleted);
 

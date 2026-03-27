@@ -93,8 +93,6 @@ public class UpdateItemQuantityCommandHandler : IRequestHandler<UpdateItemQuanti
                 await _unitOfWork.ItemInventories.AddAsync(existingItemInventory, cancellationToken);
             }
 
-            await _unitOfWork.SaveChangesAsync(cancellationToken);
-
             // Audit
             await _auditService.LogAsync(
                 action: isNew ? AuditActions.Create : AuditActions.Update,
@@ -104,6 +102,9 @@ public class UpdateItemQuantityCommandHandler : IRequestHandler<UpdateItemQuanti
                 additionalInfo: $"Quantity {(isNew ? "set" : $"changed from {oldQuantity}")} to {request.Quantity} for {item.Name} at {inventory.Name}",
                 cancellationToken: cancellationToken
             );
+
+            // Save all changes in single round-trip (TransactionBehavior handles commit)
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
 
             _logger.LogInformation("Item inventory quantity updated: {ItemName} at {InventoryName}, {OldQty} -> {NewQty}",
                 item.Name, inventory.Name, oldQuantity, request.Quantity);

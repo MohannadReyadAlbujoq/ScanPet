@@ -127,6 +127,7 @@ public class OrderRepository : GenericRepository<Order>, IOrderRepository
     public async Task<IEnumerable<Order>> GetAllWithLocationsAsync(CancellationToken cancellationToken = default)
     {
         return await _dbSet
+            .AsNoTracking()
             .Include(o => o.Location)  // ? Eager load locations
             .Where(o => !o.IsDeleted)
             .OrderByDescending(o => o.CreatedAt)

@@ -1,4 +1,5 @@
 using MobileBackend.Application.Common.Interfaces;
+using MobileBackend.Application.Interfaces;
 using System.Security.Claims;
 
 namespace MobileBackend.API.Middleware;
@@ -13,7 +14,10 @@ public class AuditLoggingMiddleware
     private readonly ILogger<AuditLoggingMiddleware> _logger;
 
     // HTTP methods that should be audited
-    private static readonly string[] AuditedMethods = { "POST", "PUT", "DELETE", "PATCH" };
+    private static readonly HashSet<string> AuditedMethods = new(StringComparer.OrdinalIgnoreCase) 
+    { 
+        "POST", "PUT", "DELETE", "PATCH" 
+    };
 
     // Paths that should be excluded from audit logging
     private static readonly string[] ExcludedPaths = 
@@ -30,7 +34,7 @@ public class AuditLoggingMiddleware
         _logger = logger;
     }
 
-    public async Task InvokeAsync(HttpContext context, IAuditService auditService)
+    public async Task InvokeAsync(HttpContext context, IAuditService auditService, IUnitOfWork unitOfWork)
     {
         // Only audit specific HTTP methods
         if (!AuditedMethods.Contains(context.Request.Method))
@@ -86,6 +90,9 @@ public class AuditLoggingMiddleware
                         $"IP: {ipAddress}, UserAgent: {userAgent}"
                     );
 
+                    // Persist audit log outside of handler transaction
+                    await unitOfWork.SaveChangesAsync();
+
                     _logger.LogInformation(
                         "Audit: User {UserId} performed {Action} on {EntityName} {EntityId} from {IpAddress}",
                         userId.Value, action, entityName, entityId, ipAddress
@@ -98,13 +105,22 @@ public class AuditLoggingMiddleware
             // Log failed audit
             if (userId.HasValue)
             {
-                await auditService.LogAsync(
-                    $"{action}_FAILED",
-                    entityName,
-                    entityId ?? Guid.Empty,
-                    userId.Value,
-                    $"Error: {ex.Message}, IP: {ipAddress}, UserAgent: {userAgent}"
-                );
+                try
+                {
+                    await auditService.LogAsync(
+                        $"{action}_FAILED",
+                        entityName,
+                        entityId ?? Guid.Empty,
+                        userId.Value,
+                        $"Error: {ex.Message}, IP: {ipAddress}, UserAgent: {userAgent}"
+                    );
+
+                    await unitOfWork.SaveChangesAsync();
+                }
+                catch
+                {
+                    // Don't let audit logging failure mask the original exception
+                }
             }
 
             _logger.LogWarning(

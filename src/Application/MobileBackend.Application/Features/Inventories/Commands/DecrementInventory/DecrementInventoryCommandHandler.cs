@@ -75,8 +75,6 @@ public class DecrementInventoryCommandHandler : IRequestHandler<DecrementInvento
             itemInventory.UpdatedBy = _currentUserService.UserId;
             _unitOfWork.ItemInventories.Update(itemInventory);
 
-            await _unitOfWork.SaveChangesAsync(cancellationToken);
-
             // Audit
             await _auditService.LogAsync(
                 action: AuditActions.Update,
@@ -87,6 +85,9 @@ public class DecrementInventoryCommandHandler : IRequestHandler<DecrementInvento
                                (request.Reason != null ? $" - Reason: {request.Reason}" : ""),
                 cancellationToken: cancellationToken
             );
+
+            // Save all changes in single round-trip (TransactionBehavior handles commit)
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
 
             _logger.LogInformation("Inventory decremented: -{Qty} of {ItemName} at {InventoryName} ({OldQty} -> {NewQty})",
                 request.Quantity, item.Name, inventory.Name, oldQuantity, newQuantity);

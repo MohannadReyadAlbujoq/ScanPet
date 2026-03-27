@@ -30,7 +30,7 @@ public class GenericRepository<TEntity> : IRepository<TEntity> where TEntity : B
 
     public virtual async Task<IEnumerable<TEntity>> GetAllAsync(CancellationToken cancellationToken = default)
     {
-        return await _dbSet.ToListAsync(cancellationToken);
+        return await _dbSet.AsNoTracking().ToListAsync(cancellationToken);
     }
 
     public virtual async Task<IEnumerable<TEntity>> FindAsync(
@@ -70,7 +70,7 @@ public class GenericRepository<TEntity> : IRepository<TEntity> where TEntity : B
         Func<IQueryable<TEntity>, IOrderedQueryable<TEntity>>? orderBy = null,
         CancellationToken cancellationToken = default)
     {
-        IQueryable<TEntity> query = _dbSet;
+        IQueryable<TEntity> query = _dbSet.AsNoTracking();
 
         if (predicate != null)
         {

@@ -103,10 +103,7 @@ public class RegisterCommandHandler : IRequestHandler<RegisterCommand, Result<Gu
 
             _unitOfWork.Users.AddUserRole(userRole);
 
-            // 8. Save changes
-            await _unitOfWork.SaveChangesAsync(cancellationToken);
-
-            // 9. Log registration in audit log
+            // 8. Log registration in audit log
             var auditLog = new AuditLog
             {
                 Id = Guid.NewGuid(),
@@ -123,6 +120,8 @@ public class RegisterCommandHandler : IRequestHandler<RegisterCommand, Result<Gu
             };
 
             await _unitOfWork.AuditLogs.AddAsync(auditLog, cancellationToken);
+
+            // 9. Save all changes in single round-trip (TransactionBehavior handles commit)
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
             _logger.LogInformation("User registered successfully with default 'User' role - {Username}, UserId: {UserId}", user.Username, user.Id);

@@ -27,7 +27,6 @@ public class OrderItemConfiguration : IEntityTypeConfiguration<OrderItem>
             .HasMaxLength(100);
 
         builder.HasIndex(oi => oi.SerialNumber)
-            .IsUnique()
             .HasFilter("\"IsDeleted\" = false");
 
         builder.Property(oi => oi.Quantity)
