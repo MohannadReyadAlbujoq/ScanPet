@@ -88,7 +88,6 @@ public class ItemsController : BaseApiController
             Description = dto.Description,
             SKU = dto.SKU,
             BasePrice = dto.BasePrice ?? 0,
-            Quantity = dto.Quantity ?? 0,
             ColorId = dto.ColorId,
             ImageUrl = dto.ImageUrl
         };
@@ -120,7 +119,6 @@ public class ItemsController : BaseApiController
             Description = dto.Description,
             SKU = dto.SKU,
             BasePrice = dto.BasePrice ?? 0,
-            Quantity = dto.Quantity ?? 0,
             ColorId = dto.ColorId,
             ImageUrl = dto.ImageUrl
         };

@@ -33,10 +33,6 @@ public class ItemConfiguration : IEntityTypeConfiguration<Item>
             .IsRequired()
             .HasColumnType("decimal(18,2)");
 
-        builder.Property(i => i.Quantity)
-            .IsRequired()
-            .HasDefaultValue(0);
-
         builder.Property(i => i.ImageUrl)
             .HasMaxLength(500);
 
@@ -47,13 +43,13 @@ public class ItemConfiguration : IEntityTypeConfiguration<Item>
             .IsRequired()
             .HasDefaultValue(false);
 
+        // Ignore the removed Quantity column — DB column kept for backward compat
+        builder.Ignore("GetTotalQuantity");
+        builder.Ignore("GetQuantityAtInventory");
+
         // Index for color lookup
         builder.HasIndex(i => i.ColorId)
             .HasFilter("\"IsDeleted\" = false");
-
-        // Index for items with available quantity
-        builder.HasIndex(i => i.Quantity)
-            .HasFilter("\"IsDeleted\" = false AND \"Quantity\" > 0");
 
         // Relationship with Color
         builder.HasOne(i => i.Color)

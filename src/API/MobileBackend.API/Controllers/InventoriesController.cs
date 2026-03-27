@@ -6,10 +6,13 @@ using MobileBackend.Application.DTOs.Common;
 using MobileBackend.Application.DTOs.Inventories;
 using MobileBackend.Application.Features.Inventories.Commands.AdjustInventory;
 using MobileBackend.Application.Features.Inventories.Commands.CreateInventory;
+using MobileBackend.Application.Features.Inventories.Commands.DecrementInventory;
 using MobileBackend.Application.Features.Inventories.Commands.DeleteInventory;
+using MobileBackend.Application.Features.Inventories.Commands.IncrementInventory;
 using MobileBackend.Application.Features.Inventories.Commands.SetItemInventory;
 using MobileBackend.Application.Features.Inventories.Commands.TransferInventory;
 using MobileBackend.Application.Features.Inventories.Commands.UpdateInventory;
+using MobileBackend.Application.Features.Inventories.Commands.UpdateItemQuantity;
 using MobileBackend.Application.Features.Inventories.Queries.GetActiveInventories;
 using MobileBackend.Application.Features.Inventories.Queries.GetAllInventories;
 using MobileBackend.Application.Features.Inventories.Queries.GetInventoryById;
@@ -128,7 +131,7 @@ public class InventoriesController : BaseApiController
     }
 
     /// <summary>
-    /// Set or update item inventory at a warehouse
+    /// Set initial item inventory at a warehouse (POST — create or set)
     /// </summary>
     [HttpPost("items")]
     public async Task<IActionResult> SetItemInventory([FromBody] SetItemInventoryDto dto)
@@ -141,6 +144,70 @@ public class InventoriesController : BaseApiController
             MinimumQuantity = dto.MinimumQuantity,
             MaximumQuantity = dto.MaximumQuantity,
             Notes = dto.Notes
+        };
+
+        var result = await Mediator.Send(command);
+        return HandleResult(result);
+    }
+
+    /// <summary>
+    /// Update item quantity at a warehouse (PUT — update quantity with full transaction)
+    /// Uses Serializable isolation for ACID compliance
+    /// </summary>
+    [HttpPut("items")]
+    public async Task<IActionResult> UpdateItemQuantity([FromBody] UpdateItemQuantityDto dto)
+    {
+        var command = new UpdateItemQuantityCommand
+        {
+            ItemId = dto.ItemId,
+            InventoryId = dto.InventoryId,
+            Quantity = dto.Quantity,
+            MinimumQuantity = dto.MinimumQuantity,
+            MaximumQuantity = dto.MaximumQuantity,
+            Notes = dto.Notes
+        };
+
+        var result = await Mediator.Send(command);
+        return HandleResult(result);
+    }
+
+    /// <summary>
+    /// Increment item quantity at a warehouse.
+    /// Uses Serializable transaction isolation.
+    /// Returns warning if quantity exceeds maximum capacity.
+    /// </summary>
+    [HttpPost("increment")]
+    public async Task<IActionResult> IncrementInventory([FromBody] IncrementInventoryDto dto)
+    {
+        var command = new IncrementInventoryCommand
+        {
+            ItemId = dto.ItemId,
+            InventoryId = dto.InventoryId,
+            Quantity = dto.Quantity,
+            Notes = dto.Notes,
+            Reason = dto.Reason
+        };
+
+        var result = await Mediator.Send(command);
+        return HandleResult(result);
+    }
+
+    /// <summary>
+    /// Decrement item quantity at a warehouse.
+    /// Uses Serializable transaction isolation.
+    /// Returns error if quantity would go below 0.
+    /// Returns warning if quantity falls below minimum threshold.
+    /// </summary>
+    [HttpPost("decrement")]
+    public async Task<IActionResult> DecrementInventory([FromBody] DecrementInventoryDto dto)
+    {
+        var command = new DecrementInventoryCommand
+        {
+            ItemId = dto.ItemId,
+            InventoryId = dto.InventoryId,
+            Quantity = dto.Quantity,
+            Notes = dto.Notes,
+            Reason = dto.Reason
         };
 
         var result = await Mediator.Send(command);

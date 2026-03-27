@@ -13,7 +13,6 @@ public class UpdateItemCommand : IRequest<Result<bool>>
     public string? Description { get; set; }
     public string? SKU { get; set; }
     public decimal BasePrice { get; set; }
-    public int Quantity { get; set; }
     public Guid? ColorId { get; set; }
     public string? ImageUrl { get; set; }
 }

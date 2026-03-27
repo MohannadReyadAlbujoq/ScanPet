@@ -78,7 +78,6 @@ public class GetAllItemsQueryHandler : IRequestHandler<GetAllItemsQuery, Result<
             Description = entity.Description,
             SKU = entity.SKU,
             BasePrice = entity.BasePrice,
-            Quantity = entity.Quantity,
             ColorId = entity.ColorId,
             ColorName = entity.Color?.Name,
             ImageUrl = entity.ImageUrl,

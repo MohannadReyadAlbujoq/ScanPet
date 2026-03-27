@@ -39,7 +39,6 @@ public class GetItemByIdQueryHandler : BaseGetByIdHandler<GetItemByIdQuery, Item
             Description = entity.Description,
             SKU = entity.SKU,
             BasePrice = entity.BasePrice,
-            Quantity = entity.Quantity,
             ColorId = entity.ColorId,
             ColorName = entity.Color?.Name,  // ? Now works correctly!
             ImageUrl = entity.ImageUrl,

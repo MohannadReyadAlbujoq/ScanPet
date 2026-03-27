@@ -52,8 +52,7 @@ public class CreateItemCommandHandlerTests : TestBase
             Name = "Test Item",
             Description = "Test Description",
             SKU = "TEST-001",
-            BasePrice = 99.99m,
-            Quantity = 10
+            BasePrice = 99.99m
         };
 
         _mockItemRepository
@@ -85,7 +84,6 @@ public class CreateItemCommandHandlerTests : TestBase
             Name = "Test Item",
             SKU = "TEST-001",
             BasePrice = 99.99m,
-            Quantity = 10,
             ColorId = colorId
         };
 
@@ -125,7 +123,6 @@ public class CreateItemCommandHandlerTests : TestBase
             Name = "Test Item",
             SKU = "TEST-001",
             BasePrice = 99.99m,
-            Quantity = 10,
             ColorId = colorId
         };
 
@@ -151,8 +148,7 @@ public class CreateItemCommandHandlerTests : TestBase
         {
             Name = "Test Item",
             SKU = "TEST-001",
-            BasePrice = 99.99m,
-            Quantity = 10
+            BasePrice = 99.99m
         };
 
         _mockItemRepository
@@ -183,8 +179,7 @@ public class CreateItemCommandHandlerTests : TestBase
         {
             Name = $"Test Item {price}",
             SKU = $"TEST-{price:000}",
-            BasePrice = price,
-            Quantity = 10
+            BasePrice = price
         };
 
         _mockItemRepository
@@ -211,8 +206,7 @@ public class CreateItemCommandHandlerTests : TestBase
         {
             Name = "Test Item",
             SKU = "TEST-001",
-            BasePrice = 99.99m,
-            Quantity = 10
+            BasePrice = 99.99m
         };
 
         Item? capturedItem = null;
@@ -233,20 +227,18 @@ public class CreateItemCommandHandlerTests : TestBase
         capturedItem!.Name.Should().Be(command.Name);
         capturedItem.SKU.Should().Be(command.SKU);
         capturedItem.BasePrice.Should().Be(command.BasePrice);
-        capturedItem.Quantity.Should().Be(command.Quantity);
         capturedItem.IsDeleted.Should().BeFalse();
     }
 
     [Fact]
-    public async Task Handle_ZeroQuantity_ShouldCreateItem()
+    public async Task Handle_ItemWithNoQuantity_ShouldCreateItem()
     {
         // Arrange
         var command = new CreateItemCommand
         {
             Name = "Test Item",
             SKU = "TEST-001",
-            BasePrice = 99.99m,
-            Quantity = 0  // Zero stock is valid
+            BasePrice = 99.99m
         };
 
         _mockItemRepository

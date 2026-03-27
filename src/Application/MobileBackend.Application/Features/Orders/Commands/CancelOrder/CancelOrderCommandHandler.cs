@@ -55,14 +55,27 @@ public class CancelOrderCommandHandler : IRequestHandler<CancelOrderCommand, Res
                 
                 var itemsDict = items.ToDictionary(i => i.Id);
 
-                // Restore item quantities
+                // Restore item quantities to inventories
                 foreach (var orderItem in order.OrderItems)
                 {
-                    // ? Now using dictionary lookup instead of database query
                     if (itemsDict.TryGetValue(orderItem.ItemId, out var item))
                     {
-                        item.Quantity += orderItem.Quantity;
-                        _unitOfWork.Items.Update(item);
+                        // Restore to the first available active inventory for this item
+                        var inventories = await _unitOfWork.ItemInventories.GetByItemIdAsync(orderItem.ItemId, cancellationToken);
+                        var targetInventory = inventories.FirstOrDefault(i => i.Inventory != null && i.Inventory.IsActive);
+                        
+                        if (targetInventory != null)
+                        {
+                            targetInventory.Quantity += orderItem.Quantity;
+                            targetInventory.UpdatedAt = DateTime.UtcNow;
+                            targetInventory.UpdatedBy = _currentUserService.UserId;
+                            _unitOfWork.ItemInventories.Update(targetInventory);
+                        }
+                        else
+                        {
+                            _logger.LogWarning("No active inventory found for item {ItemId} when cancelling order {OrderId}",
+                                orderItem.ItemId, order.Id);
+                        }
                     }
                     else
                     {

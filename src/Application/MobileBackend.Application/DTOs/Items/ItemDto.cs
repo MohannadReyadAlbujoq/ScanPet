@@ -32,11 +32,6 @@ public class ItemDto
     public decimal? BasePrice { get; set; }
     
     /// <summary>
-    /// Available quantity
-    /// </summary>
-    public int? Quantity { get; set; }
-    
-    /// <summary>
     /// Color ID (optional reference)
     /// </summary>
     public Guid? ColorId { get; set; }

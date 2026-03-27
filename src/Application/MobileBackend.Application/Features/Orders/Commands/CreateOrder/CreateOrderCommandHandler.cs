@@ -11,6 +11,7 @@ namespace MobileBackend.Application.Features.Orders.Commands.CreateOrder;
 
 /// <summary>
 /// Handler for creating a new order
+/// Uses Serializable transaction isolation (via TransactionBehavior) for inventory consistency
 /// </summary>
 public class CreateOrderCommandHandler : IRequestHandler<CreateOrderCommand, Result<Guid>>
 {
@@ -48,7 +49,7 @@ public class CreateOrderCommandHandler : IRequestHandler<CreateOrderCommand, Res
                 return Result<Guid>.FailureResult("Order must contain at least one item", 400);
             }
 
-            // ? FIX N+1: Fetch all items in single query before loop
+            // Fetch all items in single query before loop
             var itemIds = request.OrderItems
                 .Where(oi => oi.ItemId.HasValue)
                 .Select(oi => oi.ItemId!.Value)
@@ -66,28 +67,29 @@ public class CreateOrderCommandHandler : IRequestHandler<CreateOrderCommand, Res
 
             foreach (var itemDto in request.OrderItems)
             {
-                // ? Now using dictionary lookup instead of database query
                 if (!itemDto.ItemId.HasValue || !itemsDict.TryGetValue(itemDto.ItemId.Value, out var item))
                 {
                     return Result<Guid>.FailureResult($"Item with ID {itemDto.ItemId} not found", 404);
                 }
 
-                // Check quantity
-                if (item.Quantity < (itemDto.Quantity ?? 0))
+                var quantity = itemDto.Quantity ?? 0;
+
+                // Check total quantity across all inventories
+                var totalAvailable = await _unitOfWork.ItemInventories.GetTotalQuantityForItemAsync(item.Id, cancellationToken);
+                if (totalAvailable < quantity)
                 {
-                    return Result<Guid>.FailureResult($"Insufficient quantity for item {item.Name}. Available: {item.Quantity}, Requested: {itemDto.Quantity}", 400);
+                    return Result<Guid>.FailureResult(
+                        $"Insufficient quantity for item {item.Name}. Available across inventories: {totalAvailable}, Requested: {quantity}", 400);
                 }
 
                 // Calculate price
                 var salePrice = itemDto.UnitPrice ?? item.BasePrice;
-                var quantity = itemDto.Quantity ?? 0;
                 var itemTotal = salePrice * quantity;
 
                 // Generate or validate serial number
                 string serialNumber;
                 if (!string.IsNullOrEmpty(itemDto.SerialNumber))
                 {
-                    // Serial number provided by frontend - validate uniqueness
                     var existingOrderItem = await _unitOfWork.OrderItems.GetBySerialNumberAsync(itemDto.SerialNumber, cancellationToken);
                     if (existingOrderItem != null)
                     {
@@ -97,7 +99,6 @@ public class CreateOrderCommandHandler : IRequestHandler<CreateOrderCommand, Res
                 }
                 else
                 {
-                    // Auto-generate serial number
                     serialNumber = $"SN-{item.SKU}-{DateTime.UtcNow:yyyyMMdd}-{Guid.NewGuid().ToString().Substring(0, 3).ToUpper()}";
                 }
 
@@ -116,9 +117,20 @@ public class CreateOrderCommandHandler : IRequestHandler<CreateOrderCommand, Res
                 orderItems.Add(orderItem);
                 totalAmount += itemTotal;
 
-                // Decrease item quantity
-                item.Quantity -= quantity;
-                _unitOfWork.Items.Update(item);
+                // Deduct quantity from inventories (FIFO: deduct from inventories with stock)
+                var remainingToDeduct = quantity;
+                var inventories = await _unitOfWork.ItemInventories.GetByItemIdAsync(item.Id, cancellationToken);
+                foreach (var inv in inventories.Where(i => i.Quantity > 0).OrderBy(i => i.CreatedAt))
+                {
+                    if (remainingToDeduct <= 0) break;
+
+                    var deductAmount = Math.Min(inv.Quantity, remainingToDeduct);
+                    inv.Quantity -= deductAmount;
+                    inv.UpdatedAt = DateTime.UtcNow;
+                    inv.UpdatedBy = _currentUserService.UserId;
+                    _unitOfWork.ItemInventories.Update(inv);
+                    remainingToDeduct -= deductAmount;
+                }
             }
 
             // Generate order number

@@ -40,7 +40,8 @@ public class ItemRepository : GenericRepository<Item>, IItemRepository
     {
         return await _dbSet
             .Include(i => i.Color)
-            .Where(i => i.Quantity > 0)
+            .Include(i => i.ItemInventories)
+            .Where(i => i.ItemInventories.Any(ii => !ii.IsDeleted && ii.Quantity > 0))
             .ToListAsync(cancellationToken);
     }
 
@@ -55,8 +56,9 @@ public class ItemRepository : GenericRepository<Item>, IItemRepository
 
     public async Task<bool> IsItemAvailableAsync(Guid itemId, CancellationToken cancellationToken = default)
     {
-        var item = await GetByIdAsync(itemId, cancellationToken);
-        return item != null && item.Quantity > 0;
+        return await _dbSet
+            .Where(i => i.Id == itemId && !i.IsDeleted)
+            .AnyAsync(i => i.ItemInventories.Any(ii => !ii.IsDeleted && ii.Quantity > 0), cancellationToken);
     }
 
     public async Task<Item?> GetBySkuAsync(string sku, CancellationToken cancellationToken = default)
@@ -75,7 +77,10 @@ public class ItemRepository : GenericRepository<Item>, IItemRepository
     public async Task<IEnumerable<Item>> GetLowStockItemsAsync(int threshold = 10, CancellationToken cancellationToken = default)
     {
         return await _dbSet
-            .Where(i => i.Quantity < threshold)
+            .Include(i => i.ItemInventories)
+            .Where(i => !i.IsDeleted && i.ItemInventories
+                .Where(ii => !ii.IsDeleted)
+                .Sum(ii => ii.Quantity) < threshold)
             .ToListAsync(cancellationToken);
     }
 

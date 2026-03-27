@@ -1,3 +1,6 @@
+using System.Data;
+using MobileBackend.Application.Interfaces;
+
 namespace MobileBackend.Application.Interfaces;
 
 /// <summary>
@@ -18,11 +21,12 @@ public interface IUnitOfWork : IDisposable
     IAuditLogRepository AuditLogs { get; }
     IRefreshTokenRepository RefreshTokens { get; }
     IItemInventoryRepository ItemInventories { get; }
-    IInventoryRepository Inventories { get; } // NEW
+    IInventoryRepository Inventories { get; }
 
     // Transaction management
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
     Task BeginTransactionAsync(CancellationToken cancellationToken = default);
+    Task BeginTransactionAsync(IsolationLevel isolationLevel, CancellationToken cancellationToken = default);
     Task CommitTransactionAsync(CancellationToken cancellationToken = default);
     Task RollbackTransactionAsync(CancellationToken cancellationToken = default);
 }

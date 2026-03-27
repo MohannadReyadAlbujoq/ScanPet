@@ -500,7 +500,7 @@
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Pet Food Premium\",\n  \"description\": \"High-quality pet food\",\n  \"sku\": \"PF-NEW-001\",\n  \"basePrice\": 29.99,\n  \"quantity\": 100,\n  \"colorId\": null,\n  \"imageUrl\": null\n}"
+              "raw": "{\n  \"name\": \"Pet Food Premium\",\n  \"description\": \"High-quality pet food\",\n  \"sku\": \"PF-NEW-001\",\n  \"basePrice\": 29.99,\n  \"colorId\": null,\n  \"imageUrl\": null\n}"
             },
             "url": { "raw": "{{baseUrl}}/api/items", "host": ["{{baseUrl}}"], "path": ["api", "items"] }
           }
@@ -512,7 +512,7 @@
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Pet Food Premium v2\",\n  \"description\": \"Updated high-quality pet food\",\n  \"sku\": \"PF-NEW-001\",\n  \"basePrice\": 34.99,\n  \"quantity\": 150,\n  \"colorId\": null,\n  \"imageUrl\": null\n}"
+              "raw": "{\n  \"name\": \"Pet Food Premium v2\",\n  \"description\": \"Updated high-quality pet food\",\n  \"sku\": \"PF-NEW-001\",\n  \"basePrice\": 34.99,\n  \"colorId\": null,\n  \"imageUrl\": null\n}"
             },
             "url": { "raw": "{{baseUrl}}/api/items/{{itemId}}", "host": ["{{baseUrl}}"], "path": ["api", "items", "{{itemId}}"] }
           }
@@ -701,6 +701,42 @@
               "raw": "{\n  \"itemId\": \"{{itemId}}\",\n  \"inventoryId\": \"{{inventoryId}}\",\n  \"quantity\": 100,\n  \"minimumQuantity\": 10,\n  \"maximumQuantity\": 500,\n  \"notes\": \"Initial stock\"\n}"
             },
             "url": { "raw": "{{baseUrl}}/api/inventories/items", "host": ["{{baseUrl}}"], "path": ["api", "inventories", "items"] }
+          }
+        },
+        {
+          "name": "Update Item Quantity (PUT)",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"itemId\": \"{{itemId}}\",\n  \"inventoryId\": \"{{inventoryId}}\",\n  \"quantity\": 100,\n  \"minimumQuantity\": 10,\n  \"maximumQuantity\": 500,\n  \"notes\": \"Updated stock\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/inventories/items", "host": ["{{baseUrl}}"], "path": ["api", "inventories", "items"] }
+          }
+        },
+        {
+          "name": "Increment Inventory",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"itemId\": \"{{itemId}}\",\n  \"inventoryId\": \"{{inventoryId}}\",\n  \"quantity\": 10,\n  \"notes\": \"Restocking\",\n  \"reason\": \"Weekly supply delivery\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/inventories/increment", "host": ["{{baseUrl}}"], "path": ["api", "inventories", "increment"] }
+          }
+        },
+        {
+          "name": "Decrement Inventory",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"itemId\": \"{{itemId}}\",\n  \"inventoryId\": \"{{inventoryId}}\",\n  \"quantity\": 1,\n  \"notes\": \"Manual removal\",\n  \"reason\": \"Damaged goods\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/inventories/decrement", "host": ["{{baseUrl}}"], "path": ["api", "inventories", "decrement"] }
           }
         },
         {

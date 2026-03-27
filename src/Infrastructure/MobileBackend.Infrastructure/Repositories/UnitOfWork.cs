@@ -1,3 +1,4 @@
+using System.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
 using MobileBackend.Application.Interfaces;
@@ -111,6 +112,11 @@ public class UnitOfWork : IUnitOfWork
     public async Task BeginTransactionAsync(CancellationToken cancellationToken = default)
     {
         _transaction = await _context.Database.BeginTransactionAsync(cancellationToken);
+    }
+
+    public async Task BeginTransactionAsync(IsolationLevel isolationLevel, CancellationToken cancellationToken = default)
+    {
+        _transaction = await _context.Database.BeginTransactionAsync(isolationLevel, cancellationToken);
     }
 
     public async Task CommitTransactionAsync(CancellationToken cancellationToken = default)

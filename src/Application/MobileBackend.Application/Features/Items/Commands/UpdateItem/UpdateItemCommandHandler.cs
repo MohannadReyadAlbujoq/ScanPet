@@ -38,7 +38,6 @@ public class UpdateItemCommandHandler : BaseUpdateHandler<UpdateItemCommand, Ite
         entity.Description = command.Description;
         entity.SKU = command.SKU;
         entity.BasePrice = command.BasePrice;
-        entity.Quantity = command.Quantity;
         entity.ColorId = command.ColorId;
         entity.ImageUrl = command.ImageUrl;
     }
@@ -53,10 +52,10 @@ public class UpdateItemCommandHandler : BaseUpdateHandler<UpdateItemCommand, Ite
     protected override string GetAuditAction() => AuditActions.ItemUpdated;
 
     protected override string CaptureOldValues(Item entity)
-        => $"Name: {entity.Name}, Price: {entity.BasePrice}, Quantity: {entity.Quantity}";
+        => $"Name: {entity.Name}, Price: {entity.BasePrice}";
 
     protected override string CaptureNewValues(Item entity)
-        => $"Name: {entity.Name}, Price: {entity.BasePrice}, Quantity: {entity.Quantity}";
+        => $"Name: {entity.Name}, Price: {entity.BasePrice}";
 
     // Override validation to check color existence
     protected override async Task<Result<bool>> ValidateAsync(

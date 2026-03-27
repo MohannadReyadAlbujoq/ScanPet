@@ -33,7 +33,6 @@ public class CreateItemCommandHandler : BaseCreateHandler<CreateItemCommand, Ite
             Description = command.Description,
             SKU = command.SKU,
             BasePrice = command.BasePrice,
-            Quantity = command.Quantity,
             ColorId = command.ColorId,
             ImageUrl = command.ImageUrl,
             IsDeleted = false
@@ -50,7 +49,7 @@ public class CreateItemCommandHandler : BaseCreateHandler<CreateItemCommand, Ite
     protected override string GetAuditAction() => AuditActions.ItemCreated;
 
     protected override string GetAuditMessage(Item entity)
-        => $"Created item: {entity.Name} (SKU: {entity.SKU}, Price: {entity.BasePrice}, Qty: {entity.Quantity})";
+        => $"Created item: {entity.Name} (SKU: {entity.SKU}, Price: {entity.BasePrice})";
 
     // Override validation to check color existence
     protected override async Task<Result<Guid>> ValidateAsync(

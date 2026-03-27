@@ -9,13 +9,6 @@ public class Item : BaseEntity, ISoftDelete
     public string? SKU { get; set; }
     public decimal BasePrice { get; set; }
     
-    /// <summary>
-    /// DEPRECATED: Use ItemInventories collection for actual quantities per inventory
-    /// This is kept for backward compatibility and represents total quantity across all inventories
-    /// </summary>
-    [Obsolete("Use GetTotalQuantity() or ItemInventories collection instead")]
-    public int Quantity { get; set; } = 0;
-    
     public Guid? ColorId { get; set; }
     public string? ImageUrl { get; set; }
     

@@ -588,7 +588,6 @@ public static class DbSeeder
                 SKU = "PF-001",
                 Description = "High-quality premium pet food for all breeds",
                 BasePrice = 29.99m,
-                Quantity = 100,
                 ColorId = firstColor.Id
             },
             new() 
@@ -597,7 +596,6 @@ public static class DbSeeder
                 SKU = "PT-002",
                 Description = "Interactive rubber ball toy for active play",
                 BasePrice = 9.99m,
-                Quantity = 50,
                 ColorId = firstColor.Id
             },
             new() 
@@ -606,7 +604,6 @@ public static class DbSeeder
                 SKU = "PC-003",
                 Description = "Adjustable nylon collar for large pets",
                 BasePrice = 15.99m,
-                Quantity = 75,
                 ColorId = firstColor.Id
             },
             new() 
@@ -615,7 +612,6 @@ public static class DbSeeder
                 SKU = "PB-004",
                 Description = "Orthopedic comfort bed for senior pets",
                 BasePrice = 49.99m,
-                Quantity = 30,
                 ColorId = firstColor.Id
             },
             new() 
@@ -624,7 +620,6 @@ public static class DbSeeder
                 SKU = "PS-005",
                 Description = "Natural and gentle grooming shampoo",
                 BasePrice = 12.99m,
-                Quantity = 60,
                 ColorId = firstColor.Id
             },
             new() 
@@ -633,7 +628,6 @@ public static class DbSeeder
                 SKU = "PL-006",
                 Description = "15ft retractable leash with lock mechanism",
                 BasePrice = 19.99m,
-                Quantity = 40,
                 ColorId = firstColor.Id
             },
             new() 
@@ -642,7 +636,6 @@ public static class DbSeeder
                 SKU = "PT-007",
                 Description = "Healthy organic training treats",
                 BasePrice = 7.99m,
-                Quantity = 80,
                 ColorId = firstColor.Id
             },
             new() 
@@ -651,7 +644,6 @@ public static class DbSeeder
                 SKU = "PB-008",
                 Description = "Stainless steel food and water bowl set",
                 BasePrice = 24.99m,
-                Quantity = 45,
                 ColorId = firstColor.Id
             },
             new() 
@@ -660,7 +652,6 @@ public static class DbSeeder
                 SKU = "PC-009",
                 Description = "Airline-approved travel carrier",
                 BasePrice = 59.99m,
-                Quantity = 20,
                 ColorId = firstColor.Id
             },
             new() 
@@ -669,7 +660,6 @@ public static class DbSeeder
                 SKU = "PG-010",
                 Description = "Complete grooming tools set",
                 BasePrice = 34.99m,
-                Quantity = 35,
                 ColorId = firstColor.Id
             }
         };

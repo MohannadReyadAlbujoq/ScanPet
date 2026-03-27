@@ -18,6 +18,8 @@ public class RefundOrderItemCommandHandlerTests : TestBase
     private readonly Mock<IUnitOfWork> _mockUnitOfWork;
     private readonly Mock<IOrderItemRepository> _mockOrderItemRepository;
     private readonly Mock<IItemRepository> _mockItemRepository;
+    private readonly Mock<IInventoryRepository> _mockInventoryRepository;
+    private readonly Mock<IItemInventoryRepository> _mockItemInventoryRepository;
     private readonly Mock<IAuditService> _mockAuditService;
     private readonly Mock<ICurrentUserService> _mockCurrentUserService;
     private readonly Mock<ILogger<RefundOrderItemCommandHandler>> _mockLogger;
@@ -28,12 +30,16 @@ public class RefundOrderItemCommandHandlerTests : TestBase
         _mockUnitOfWork = CreateMock<IUnitOfWork>();
         _mockOrderItemRepository = CreateMock<IOrderItemRepository>();
         _mockItemRepository = CreateMock<IItemRepository>();
+        _mockInventoryRepository = CreateMock<IInventoryRepository>();
+        _mockItemInventoryRepository = CreateMock<IItemInventoryRepository>();
         _mockAuditService = CreateMock<IAuditService>();
         _mockCurrentUserService = CreateMock<ICurrentUserService>();
         _mockLogger = CreateMock<ILogger<RefundOrderItemCommandHandler>>();
 
         _mockUnitOfWork.Setup(x => x.OrderItems).Returns(_mockOrderItemRepository.Object);
         _mockUnitOfWork.Setup(x => x.Items).Returns(_mockItemRepository.Object);
+        _mockUnitOfWork.Setup(x => x.Inventories).Returns(_mockInventoryRepository.Object);
+        _mockUnitOfWork.Setup(x => x.ItemInventories).Returns(_mockItemInventoryRepository.Object);
         _mockCurrentUserService.Setup(x => x.UserId).Returns(Guid.NewGuid());
 
         _handler = new RefundOrderItemCommandHandler(
@@ -51,20 +57,28 @@ public class RefundOrderItemCommandHandlerTests : TestBase
         var refundQuantity = 2;
         var itemPrice = 100m;
         var itemId = Guid.NewGuid();
+        var inventoryId = Guid.NewGuid();
 
         var command = new RefundOrderItemCommand
         {
             SerialNumber = serialNumber,
             RefundQuantity = refundQuantity,
-            RefundReason = "Customer request"
+            RefundReason = "Customer request",
+            RefundToInventoryId = inventoryId
         };
 
         var item = new Item
         {
             Id = itemId,
             Name = "Test Item",
-            Quantity = 10,
             BasePrice = itemPrice
+        };
+
+        var inventory = new Inventory
+        {
+            Id = inventoryId,
+            Name = "Test Warehouse",
+            IsActive = true
         };
 
         var orderItem = new OrderItem
@@ -82,16 +96,20 @@ public class RefundOrderItemCommandHandlerTests : TestBase
             .Setup(x => x.GetBySerialNumberAsync(serialNumber, It.IsAny<CancellationToken>()))
             .ReturnsAsync(orderItem);
 
+        _mockInventoryRepository
+            .Setup(x => x.GetByIdAsync(inventoryId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(inventory);
+
         _mockItemRepository
             .Setup(x => x.GetByIdAsync(itemId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(item);
 
+        _mockItemInventoryRepository
+            .Setup(x => x.AdjustInventoryAsync(itemId, inventoryId, refundQuantity, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+
         _mockOrderItemRepository
             .Setup(x => x.Update(It.IsAny<OrderItem>()))
-            .Verifiable();
-
-        _mockItemRepository
-            .Setup(x => x.Update(It.IsAny<Item>()))
             .Verifiable();
 
         _mockUnitOfWork
@@ -105,10 +123,10 @@ public class RefundOrderItemCommandHandlerTests : TestBase
         result.Success.Should().BeTrue();
         orderItem.Status.Should().Be(OrderItemStatus.Refunded);
         orderItem.RefundedQuantity.Should().Be(refundQuantity);
-        item.Quantity.Should().Be(12); // 10 + 2 refunded
+        orderItem.RefundedToInventoryId.Should().Be(inventoryId);
 
+        _mockItemInventoryRepository.Verify(x => x.AdjustInventoryAsync(itemId, inventoryId, refundQuantity, It.IsAny<CancellationToken>()), Times.Once);
         _mockOrderItemRepository.Verify(x => x.Update(orderItem), Times.Once);
-        _mockItemRepository.Verify(x => x.Update(item), Times.Once);
         _mockUnitOfWork.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 
@@ -121,7 +139,8 @@ public class RefundOrderItemCommandHandlerTests : TestBase
         {
             SerialNumber = serialNumber,
             RefundQuantity = 1,
-            RefundReason = "Test"
+            RefundReason = "Test",
+            RefundToInventoryId = Guid.NewGuid()
         };
 
         _mockOrderItemRepository
@@ -145,13 +164,14 @@ public class RefundOrderItemCommandHandlerTests : TestBase
         var command = new RefundOrderItemCommand
         {
             SerialNumber = serialNumber,
-            RefundQuantity = 1
+            RefundQuantity = 1,
+            RefundToInventoryId = Guid.NewGuid()
         };
 
         var orderItem = new OrderItem
         {
             SerialNumber = serialNumber,
-            Status = OrderItemStatus.Refunded, // Already refunded
+            Status = OrderItemStatus.Refunded,
             RefundedQuantity = 2
         };
 
@@ -176,13 +196,14 @@ public class RefundOrderItemCommandHandlerTests : TestBase
         var command = new RefundOrderItemCommand
         {
             SerialNumber = serialNumber,
-            RefundQuantity = 1
+            RefundQuantity = 1,
+            RefundToInventoryId = Guid.NewGuid()
         };
 
         var orderItem = new OrderItem
         {
             SerialNumber = serialNumber,
-            IsDeleted = true, // Deleted
+            IsDeleted = true,
             DeletedAt = DateTime.UtcNow
         };
 
@@ -207,13 +228,14 @@ public class RefundOrderItemCommandHandlerTests : TestBase
         var command = new RefundOrderItemCommand
         {
             SerialNumber = serialNumber,
-            RefundQuantity = 10 // More than available
+            RefundQuantity = 10,
+            RefundToInventoryId = Guid.NewGuid()
         };
 
         var orderItem = new OrderItem
         {
             SerialNumber = serialNumber,
-            Quantity = 5, // Only 5 available
+            Quantity = 5,
             Status = OrderItemStatus.Successful,
             RefundedQuantity = 0
         };
@@ -232,45 +254,6 @@ public class RefundOrderItemCommandHandlerTests : TestBase
     }
 
     [Fact]
-    public async Task Handle_ItemNotFound_ShouldReturnFailure()
-    {
-        // Arrange
-        var serialNumber = "SN-ITEM123-001";
-        var itemId = Guid.NewGuid();
-
-        var command = new RefundOrderItemCommand
-        {
-            SerialNumber = serialNumber,
-            RefundQuantity = 1
-        };
-
-        var orderItem = new OrderItem
-        {
-            SerialNumber = serialNumber,
-            ItemId = itemId,
-            Quantity = 5,
-            Status = OrderItemStatus.Successful,
-            RefundedQuantity = 0
-        };
-
-        _mockOrderItemRepository
-            .Setup(x => x.GetBySerialNumberAsync(serialNumber, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(orderItem);
-
-        _mockItemRepository
-            .Setup(x => x.GetByIdAsync(itemId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync((Item?)null);
-
-        // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
-
-        // Assert
-        result.Success.Should().BeFalse();
-        result.ErrorMessage.Should().Contain("Related item not found");
-        result.StatusCode.Should().Be(404);
-    }
-
-    [Fact]
     public async Task Handle_ZeroRefundQuantity_ShouldReturnFailure()
     {
         // Arrange
@@ -278,18 +261,9 @@ public class RefundOrderItemCommandHandlerTests : TestBase
         var command = new RefundOrderItemCommand
         {
             SerialNumber = serialNumber,
-            RefundQuantity = 0 // Invalid
+            RefundQuantity = 0,
+            RefundToInventoryId = Guid.NewGuid()
         };
-
-        var orderItem = new OrderItem
-        {
-            SerialNumber = serialNumber,
-            Quantity = 5
-        };
-
-        _mockOrderItemRepository
-            .Setup(x => x.GetBySerialNumberAsync(serialNumber, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(orderItem);
 
         // Act
         var result = await _handler.Handle(command, CancellationToken.None);
@@ -308,7 +282,8 @@ public class RefundOrderItemCommandHandlerTests : TestBase
         var command = new RefundOrderItemCommand
         {
             SerialNumber = serialNumber,
-            RefundQuantity = 1
+            RefundQuantity = 1,
+            RefundToInventoryId = Guid.NewGuid()
         };
 
         _mockOrderItemRepository
@@ -324,115 +299,49 @@ public class RefundOrderItemCommandHandlerTests : TestBase
         result.StatusCode.Should().Be(500);
     }
 
-    [Theory]
-    [InlineData(1)]
-    [InlineData(3)]
-    [InlineData(5)]
-    public async Task Handle_VariousRefundQuantities_ShouldRestoreCorrectInventory(int refundQuantity)
-    {
-        // Arrange
-        var serialNumber = "SN-ITEM123-001";
-        var itemId = Guid.NewGuid();
-        var initialInventory = 100;
-
-        var command = new RefundOrderItemCommand
-        {
-            SerialNumber = serialNumber,
-            RefundQuantity = refundQuantity
-        };
-
-        var item = new Item
-        {
-            Id = itemId,
-            Name = "Test Item",
-            Quantity = initialInventory,
-            BasePrice = 50m
-        };
-
-        var orderItem = new OrderItem
-        {
-            SerialNumber = serialNumber,
-            ItemId = itemId,
-            Quantity = 10,
-            Status = OrderItemStatus.Successful,
-            RefundedQuantity = 0
-        };
-
-        _mockOrderItemRepository
-            .Setup(x => x.GetBySerialNumberAsync(serialNumber, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(orderItem);
-
-        _mockItemRepository
-            .Setup(x => x.GetByIdAsync(itemId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(item);
-
-        _mockOrderItemRepository.Setup(x => x.Update(It.IsAny<OrderItem>())).Verifiable();
-        _mockItemRepository.Setup(x => x.Update(It.IsAny<Item>())).Verifiable();
-
-        _mockUnitOfWork
-            .Setup(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(1);
-
-        // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
-
-        // Assert
-        result.Success.Should().BeTrue();
-        orderItem.RefundedQuantity.Should().Be(refundQuantity);
-        item.Quantity.Should().Be(initialInventory + refundQuantity);
-    }
-
     [Fact]
-    public async Task Handle_WithRefundReason_ShouldStoreReason()
+    public async Task Handle_InactiveInventory_ShouldReturnFailure()
     {
         // Arrange
         var serialNumber = "SN-ITEM123-001";
-        var refundReason = "Product defect - customer not satisfied";
-        var itemId = Guid.NewGuid();
-
+        var inventoryId = Guid.NewGuid();
         var command = new RefundOrderItemCommand
         {
             SerialNumber = serialNumber,
             RefundQuantity = 1,
-            RefundReason = refundReason
-        };
-
-        var item = new Item
-        {
-            Id = itemId,
-            Quantity = 10
+            RefundToInventoryId = inventoryId
         };
 
         var orderItem = new OrderItem
         {
             SerialNumber = serialNumber,
-            ItemId = itemId,
+            ItemId = Guid.NewGuid(),
             Quantity = 5,
-            Status = OrderItemStatus.Successful
+            Status = OrderItemStatus.Successful,
+            RefundedQuantity = 0
+        };
+
+        var inventory = new Inventory
+        {
+            Id = inventoryId,
+            Name = "Inactive Warehouse",
+            IsActive = false
         };
 
         _mockOrderItemRepository
             .Setup(x => x.GetBySerialNumberAsync(serialNumber, It.IsAny<CancellationToken>()))
             .ReturnsAsync(orderItem);
 
-        _mockItemRepository
-            .Setup(x => x.GetByIdAsync(itemId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(item);
-
-        _mockOrderItemRepository.Setup(x => x.Update(It.IsAny<OrderItem>())).Verifiable();
-        _mockItemRepository.Setup(x => x.Update(It.IsAny<Item>())).Verifiable();
-
-        _mockUnitOfWork
-            .Setup(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(1);
+        _mockInventoryRepository
+            .Setup(x => x.GetByIdAsync(inventoryId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(inventory);
 
         // Act
         var result = await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        result.Success.Should().BeTrue();
-        orderItem.Status.Should().Be(OrderItemStatus.Refunded);
-        orderItem.RefundedAt.Should().NotBeNull();
-        // Note: RefundReason is set in the handler but not accessible in test due to how mocks work
+        result.Success.Should().BeFalse();
+        result.ErrorMessage.Should().Contain("inactive");
+        result.StatusCode.Should().Be(400);
     }
 }

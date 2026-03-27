@@ -29,9 +29,6 @@ public class UpdateItemValidator : AbstractValidator<UpdateItemCommand>
         RuleFor(x => x.BasePrice)
             .GreaterThanOrEqualTo(0).WithMessage("Base price must be greater than or equal to 0");
 
-        RuleFor(x => x.Quantity)
-            .GreaterThanOrEqualTo(0).WithMessage("Quantity must be greater than or equal to 0");
-
         RuleFor(x => x.ImageUrl)
             .MaximumLength(500).WithMessage("Image URL must not exceed 500 characters")
             .When(x => !string.IsNullOrEmpty(x.ImageUrl));
