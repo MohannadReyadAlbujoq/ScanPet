@@ -12,6 +12,7 @@ using Microsoft.EntityFrameworkCore;
 using System.Text;
 using NLog;
 using NLog.Web;
+using Microsoft.Extensions.DependencyInjection;
 
 // Configure NLog before building the application
 var logger = NLog.LogManager.Setup().LoadConfigurationFromFile("nlog.config").GetCurrentClassLogger();
@@ -52,6 +53,14 @@ try
         logger.Info("JWT keys loaded from environment variables");
     }
 
+    // ?? RAILWAY DEPLOYMENT: Read JWT secret from environment variable
+    var jwtSecretEnv = Environment.GetEnvironmentVariable("JWT_SECRET_KEY");
+    if (!string.IsNullOrEmpty(jwtSecretEnv))
+    {
+        builder.Configuration["JwtSettings:SecretKey"] = jwtSecretEnv;
+        logger.Info("JWT secret key loaded from environment variable");
+    }
+
     // ?? CLEAN ARCHITECTURE: Register services from each layer using extension methods
     // This follows the Service Binder pattern for production-ready applications
 
@@ -71,24 +80,12 @@ try
 
     // 5. JWT Authentication Configuration
     var jwtSettings = builder.Configuration.GetSection("JwtSettings");
-    var privateKeyBase64 = jwtSettings["PrivateKey"];
-    var publicKeyBase64 = jwtSettings["PublicKey"];
+    var secretKey = jwtSettings["SecretKey"];
 
-    // Only configure JWT if keys are properly set (not placeholder values)
-    if (!string.IsNullOrEmpty(publicKeyBase64) && 
-        !publicKeyBase64.Contains("BASE64") && 
-        !publicKeyBase64.Contains("PLACEHOLDER"))
+    if (!string.IsNullOrEmpty(secretKey))
     {
         try
         {
-            // Decode Base64 to XML format
-            var publicKeyBytes = Convert.FromBase64String(publicKeyBase64);
-            var publicKeyXml = System.Text.Encoding.UTF8.GetString(publicKeyBytes);
-            
-            // Import RSA key from XML
-            var rsa = new System.Security.Cryptography.RSACryptoServiceProvider(2048);
-            rsa.FromXmlString(publicKeyXml);
-
             builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
                 .AddJwtBearer(options =>
                 {
@@ -100,8 +97,8 @@ try
                         ValidateIssuerSigningKey = true,
                         ValidIssuer = jwtSettings["Issuer"],
                         ValidAudience = jwtSettings["Audience"],
-                        IssuerSigningKey = new RsaSecurityKey(rsa),
-                        ClockSkew = TimeSpan.Zero // Remove default 5-minute buffer
+                        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey)),
+                        ClockSkew = TimeSpan.Zero
                     };
 
                     options.Events = new JwtBearerEvents
@@ -135,12 +132,12 @@ try
         }
         catch (Exception ex)
         {
-            logger.Warn(ex, "JWT authentication not configured - keys may be invalid. Auth endpoints will not work until keys are generated.");
+            logger.Warn(ex, "JWT authentication not configured.");
         }
     }
     else
     {
-        logger.Warn("JWT keys not configured (placeholder values detected). Run 'generate-jwt-keys.ps1' to generate keys.");
+        logger.Warn("JWT SecretKey not configured.");
     }
 
     builder.Services.AddAuthorization();

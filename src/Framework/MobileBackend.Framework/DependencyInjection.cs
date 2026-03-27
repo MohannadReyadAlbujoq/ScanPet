@@ -1,3 +1,4 @@
+using System.Text;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using MobileBackend.Framework.Security;
@@ -42,8 +43,7 @@ public static class DependencyInjection
     /// Required configuration in appsettings.json:
     /// {
     ///   "JwtSettings": {
-    ///     "PrivateKey": "Base64-encoded-RSA-private-key",
-    ///     "PublicKey": "Base64-encoded-RSA-public-key",
+    ///     "SecretKey": "your-secret-key-at-least-32-characters-long",
     ///     "Issuer": "MobileBackendAPI",
     ///     "Audience": "MobileApp",
     ///     "AccessTokenExpiryMinutes": 15,
@@ -61,7 +61,7 @@ public static class DependencyInjection
         {
             throw new InvalidOperationException(
                 "JwtSettings configuration is missing in appsettings.json. " +
-                "Please add the JwtSettings section with PrivateKey, PublicKey, Issuer, Audience, " +
+                "Please add the JwtSettings section with SecretKey, Issuer, Audience, " +
                 "AccessTokenExpiryMinutes, and RefreshTokenExpiryDays.");
         }
 
@@ -81,11 +81,10 @@ public static class DependencyInjection
     {
         var errors = new List<string>();
 
-        if (string.IsNullOrWhiteSpace(settings.PrivateKey))
-            errors.Add("JwtSettings.PrivateKey is required");
-
-        if (string.IsNullOrWhiteSpace(settings.PublicKey))
-            errors.Add("JwtSettings.PublicKey is required");
+        if (string.IsNullOrWhiteSpace(settings.SecretKey))
+            errors.Add("JwtSettings.SecretKey is required");
+        else if (Encoding.UTF8.GetByteCount(settings.SecretKey) < 32)
+            errors.Add("JwtSettings.SecretKey must be at least 32 characters long");
 
         if (string.IsNullOrWhiteSpace(settings.Issuer))
             errors.Add("JwtSettings.Issuer is required");
