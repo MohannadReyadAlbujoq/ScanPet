@@ -2,6 +2,7 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
+using System.Xml;
 using Microsoft.IdentityModel.Tokens;
 using MobileBackend.Framework.Security.Models;
 
@@ -9,6 +10,7 @@ namespace MobileBackend.Framework.Security;
 
 /// <summary>
 /// Implementation of JWT token service using RS256 algorithm
+/// Cross-platform compatible (Windows + Linux/Docker)
 /// </summary>
 public class JwtService : IJwtService
 {
@@ -22,25 +24,58 @@ public class JwtService : IJwtService
         _jwtSettings = jwtSettings ?? throw new ArgumentNullException(nameof(jwtSettings));
         _tokenHandler = new JwtSecurityTokenHandler();
 
-        // Load RSA keys from base64-encoded XML strings
-        _privateRsa = new RSACryptoServiceProvider(2048);
-        _publicRsa = new RSACryptoServiceProvider(2048);
-
         try
         {
-            // Decode Base64 to XML format
             var privateKeyBytes = Convert.FromBase64String(_jwtSettings.PrivateKey);
             var privateKeyXml = Encoding.UTF8.GetString(privateKeyBytes);
-            ((RSACryptoServiceProvider)_privateRsa).FromXmlString(privateKeyXml);
+            _privateRsa = RSA.Create();
+            ImportRsaKeyFromXml(_privateRsa, privateKeyXml, includePrivate: true);
 
             var publicKeyBytes = Convert.FromBase64String(_jwtSettings.PublicKey);
             var publicKeyXml = Encoding.UTF8.GetString(publicKeyBytes);
-            ((RSACryptoServiceProvider)_publicRsa).FromXmlString(publicKeyXml);
+            _publicRsa = RSA.Create();
+            ImportRsaKeyFromXml(_publicRsa, publicKeyXml, includePrivate: false);
         }
         catch (Exception ex)
         {
-            throw new InvalidOperationException("Failed to load RSA keys. Ensure they are properly base64-encoded XML format. Run 'generate-jwt-keys.ps1' to generate keys.", ex);
+            throw new InvalidOperationException(
+                "Failed to load RSA keys. Ensure they are properly base64-encoded XML format. Run 'generate-jwt-keys.ps1' to generate keys.", ex);
         }
+    }
+
+    /// <summary>
+    /// Cross-platform RSA XML key importer.
+    /// Replaces RSACryptoServiceProvider.FromXmlString() which is Windows-only.
+    /// </summary>
+    private static void ImportRsaKeyFromXml(RSA rsa, string xmlString, bool includePrivate)
+    {
+        var parameters = new RSAParameters();
+        var doc = new XmlDocument();
+        doc.LoadXml(xmlString);
+
+        var root = doc.DocumentElement!;
+
+        parameters.Modulus  = GetBase64Bytes(root, "Modulus");
+        parameters.Exponent = GetBase64Bytes(root, "Exponent");
+
+        if (includePrivate)
+        {
+            parameters.P            = GetBase64Bytes(root, "P");
+            parameters.Q            = GetBase64Bytes(root, "Q");
+            parameters.DP           = GetBase64Bytes(root, "DP");
+            parameters.DQ           = GetBase64Bytes(root, "DQ");
+            parameters.InverseQ     = GetBase64Bytes(root, "InverseQ");
+            parameters.D            = GetBase64Bytes(root, "D");
+        }
+
+        rsa.ImportParameters(parameters);
+    }
+
+    private static byte[] GetBase64Bytes(XmlElement root, string tagName)
+    {
+        var node = root.GetElementsByTagName(tagName)[0]
+            ?? throw new InvalidOperationException($"RSA XML key is missing <{tagName}> element.");
+        return Convert.FromBase64String(node.InnerText);
     }
 
     public string GenerateAccessToken(Guid userId, string email, List<string> roles, long permissionsBitmask)
