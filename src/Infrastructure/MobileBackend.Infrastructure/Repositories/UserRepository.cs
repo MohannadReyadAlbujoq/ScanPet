@@ -34,6 +34,7 @@ public class UserRepository : GenericRepository<User>, IUserRepository
         return await _dbSet
             .Include(u => u.UserRoles)
                 .ThenInclude(ur => ur.Role)
+            .Include(u => u.DefaultInventory)
             .FirstOrDefaultAsync(u => u.Id == userId, cancellationToken);
     }
 
@@ -107,6 +108,7 @@ public class UserRepository : GenericRepository<User>, IUserRepository
         var query = _dbSet
             .Include(u => u.UserRoles)
                 .ThenInclude(ur => ur.Role)
+            .Include(u => u.DefaultInventory)
             .OrderBy(u => u.CreatedAt);
 
         var totalCount = await query.CountAsync(cancellationToken);

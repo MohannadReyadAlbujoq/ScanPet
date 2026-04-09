@@ -45,7 +45,17 @@ public class UserDto
     /// Whether the user account is approved
     /// </summary>
     public bool? IsApproved { get; set; }
-    
+
+    /// <summary>
+    /// Default inventory/warehouse ID assigned to this user
+    /// </summary>
+    public Guid? DefaultInventoryId { get; set; }
+
+    /// <summary>
+    /// Default inventory/warehouse name (only in responses)
+    /// </summary>
+    public string? DefaultInventoryName { get; set; }
+
     /// <summary>
     /// User roles (only in responses)
     /// </summary>

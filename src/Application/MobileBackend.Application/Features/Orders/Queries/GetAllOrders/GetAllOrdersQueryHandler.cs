@@ -5,6 +5,7 @@ using MobileBackend.Application.Common.Handlers;
 using MobileBackend.Application.DTOs.Orders;
 using MobileBackend.Application.Interfaces;
 using MobileBackend.Domain.Entities;
+using MobileBackend.Domain.Enums;
 
 namespace MobileBackend.Application.Features.Orders.Queries.GetAllOrders;
 
@@ -26,9 +27,18 @@ public class GetAllOrdersQueryHandler : BaseGetAllHandler<GetAllOrdersQuery, Ord
 
     protected override async Task<List<Order>> GetEntitiesAsync(GetAllOrdersQuery request, CancellationToken cancellationToken)
     {
-        // Use optimized method that includes locations ?
+        // Use optimized method that includes locations
         var orders = await _unitOfWork.Orders.GetAllWithLocationsAsync(cancellationToken);
-        return orders.ToList();
+        var result = orders.ToList();
+
+        // Filter by status if specified
+        if (request.Status.HasValue && Enum.IsDefined(typeof(OrderStatus), request.Status.Value))
+        {
+            var status = (OrderStatus)request.Status.Value;
+            result = result.Where(o => o.OrderStatus == status).ToList();
+        }
+
+        return result;
     }
 
     protected override OrderDto MapToDto(Order entity)

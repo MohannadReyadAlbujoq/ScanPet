@@ -10,47 +10,67 @@ public class OrderItemDto
     /// Order item ID (only for responses, not for create)
     /// </summary>
     public Guid? Id { get; set; }
-    
+
     /// <summary>
     /// Order ID (only for responses, set by order creation)
     /// </summary>
     public Guid? OrderId { get; set; }
-    
+
     /// <summary>
     /// Item ID (required for create)
     /// </summary>
     public Guid? ItemId { get; set; }
-    
+
     /// <summary>
     /// Item name (only in responses)
     /// </summary>
     public string? ItemName { get; set; }
-    
+
     /// <summary>
     /// Quantity ordered (required for create/update)
     /// </summary>
     public int? Quantity { get; set; }
-    
+
     /// <summary>
     /// Unit price at time of order (required for create)
     /// </summary>
     public decimal? UnitPrice { get; set; }
-    
+
     /// <summary>
     /// Total price for this line item (computed: Quantity * UnitPrice)
     /// </summary>
     public decimal? TotalPrice { get; set; }
-    
+
     /// <summary>
     /// Order item status (Successful, Refunded)
     /// </summary>
     public int? Status { get; set; }
-    
+
     /// <summary>
     /// Order item status name (only in responses)
     /// </summary>
     public string? StatusName { get; set; }
-    
+
+    /// <summary>
+    /// Refunded quantity (only in responses, 0 if not refunded)
+    /// </summary>
+    public int? RefundedQuantity { get; set; }
+
+    /// <summary>
+    /// Refund amount for this item (computed: RefundedQuantity * UnitPrice)
+    /// </summary>
+    public decimal? RefundedAmount { get; set; }
+
+    /// <summary>
+    /// Refund reason (only in responses)
+    /// </summary>
+    public string? RefundReason { get; set; }
+
+    /// <summary>
+    /// Date when item was refunded (only in responses)
+    /// </summary>
+    public DateTime? RefundedAt { get; set; }
+
     /// <summary>
     /// Creation timestamp (only in responses)
     /// </summary>

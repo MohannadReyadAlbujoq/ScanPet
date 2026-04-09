@@ -135,6 +135,14 @@ public class RefreshTokenCommandHandler : IRequestHandler<RefreshTokenCommand, R
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
             // 13. Build response
+            // Resolve default inventory name if set
+            string? defaultInventoryName = null;
+            if (user.DefaultInventoryId.HasValue)
+            {
+                var inv = await _unitOfWork.Inventories.GetByIdAsync(user.DefaultInventoryId.Value, cancellationToken);
+                defaultInventoryName = inv?.Name;
+            }
+
             var response = new LoginResponseDto
             {
                 AccessToken = newAccessToken,
@@ -148,6 +156,8 @@ public class RefreshTokenCommandHandler : IRequestHandler<RefreshTokenCommand, R
                     FullName = user.FullName,
                     IsEnabled = user.IsEnabled,
                     IsApproved = user.IsApproved,
+                    DefaultInventoryId = user.DefaultInventoryId,
+                    DefaultInventoryName = defaultInventoryName,
                     Roles = roles.ToList(),
                     PermissionsBitmask = permissionsBitmask
                 }

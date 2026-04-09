@@ -102,7 +102,9 @@ public class ItemRepository : GenericRepository<Item>, IItemRepository
     public async Task<Item?> GetByIdWithColorAsync(Guid id, CancellationToken cancellationToken = default)
     {
         return await _dbSet
-            .Include(i => i.Color)  // ? Eager load color
+            .Include(i => i.Color)
+            .Include(i => i.ItemInventories.Where(ii => !ii.IsDeleted))
+                .ThenInclude(ii => ii.Inventory)
             .FirstOrDefaultAsync(i => i.Id == id && !i.IsDeleted, cancellationToken);
     }
 
@@ -125,6 +127,8 @@ public class ItemRepository : GenericRepository<Item>, IItemRepository
         IQueryable<Item> query = _dbSet
             .AsNoTracking()
             .Include(i => i.Color)
+            .Include(i => i.ItemInventories.Where(ii => !ii.IsDeleted))
+                .ThenInclude(ii => ii.Inventory)
             .Where(i => !i.IsDeleted);
 
         // Filter by inventory if specified

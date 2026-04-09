@@ -118,6 +118,14 @@ public class LoginCommandHandler : IRequestHandler<LoginCommand, Result<LoginRes
             await LogSuccessfulLogin(user.Id, user.Username, request.IpAddress);
 
             // 10. Build response
+            // Resolve default inventory name if set
+            string? defaultInventoryName = null;
+            if (user.DefaultInventoryId.HasValue)
+            {
+                var inv = await _unitOfWork.Inventories.GetByIdAsync(user.DefaultInventoryId.Value, cancellationToken);
+                defaultInventoryName = inv?.Name;
+            }
+
             var response = new LoginResponseDto
             {
                 AccessToken = accessToken,
@@ -131,6 +139,8 @@ public class LoginCommandHandler : IRequestHandler<LoginCommand, Result<LoginRes
                     FullName = user.FullName,
                     IsEnabled = user.IsEnabled,
                     IsApproved = user.IsApproved,
+                    DefaultInventoryId = user.DefaultInventoryId,
+                    DefaultInventoryName = defaultInventoryName,
                     Roles = roles.ToList(),
                     PermissionsBitmask = permissionsBitmask
                 }

@@ -11,13 +11,19 @@ public class User : BaseEntity, ISoftDelete
     public string? FullName { get; set; }
     public bool IsEnabled { get; set; } = false;
     public bool IsApproved { get; set; } = false;
-    
+
+    /// <summary>
+    /// Default inventory/warehouse assigned to this user
+    /// </summary>
+    public Guid? DefaultInventoryId { get; set; }
+
     // Soft Delete
     public bool IsDeleted { get; set; } = false;
     public DateTime? DeletedAt { get; set; }
     public Guid? DeletedBy { get; set; }
-    
+
     // Navigation Properties
+    public virtual Inventory? DefaultInventory { get; set; }
     public virtual ICollection<UserRole> UserRoles { get; set; } = new List<UserRole>();
     public virtual ICollection<RefreshToken> RefreshTokens { get; set; } = new List<RefreshToken>();
 }

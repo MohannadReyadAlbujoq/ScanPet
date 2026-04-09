@@ -18,6 +18,7 @@ public class ItemInventoryRepository : GenericRepository<ItemInventory>, IItemIn
     {
         return await _dbSet
             .Include(ii => ii.Item)
+                .ThenInclude(i => i.Color)
             .Include(ii => ii.Inventory)
             .Where(ii => ii.ItemId == itemId)
             .ToListAsync(cancellationToken);
@@ -27,6 +28,7 @@ public class ItemInventoryRepository : GenericRepository<ItemInventory>, IItemIn
     {
         return await _dbSet
             .Include(ii => ii.Item)
+                .ThenInclude(i => i.Color)
             .Include(ii => ii.Inventory)
             .Where(ii => ii.InventoryId == inventoryId)
             .ToListAsync(cancellationToken);
@@ -51,6 +53,7 @@ public class ItemInventoryRepository : GenericRepository<ItemInventory>, IItemIn
     {
         return await _dbSet
             .Include(ii => ii.Item)
+                .ThenInclude(i => i.Color)
             .Include(ii => ii.Inventory)
             .Where(ii => ii.MinimumQuantity.HasValue && ii.Quantity <= ii.MinimumQuantity.Value)
             .ToListAsync(cancellationToken);

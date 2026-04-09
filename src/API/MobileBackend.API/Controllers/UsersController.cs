@@ -5,6 +5,7 @@ using MobileBackend.API.Controllers.Base;
 using MobileBackend.Application.DTOs.Users;
 using MobileBackend.Application.Features.Users.Commands.ApproveUser;
 using MobileBackend.Application.Features.Users.Commands.CreateUser;
+using MobileBackend.Application.Features.Users.Commands.SetDefaultInventory;
 using MobileBackend.Application.Features.Users.Commands.ToggleUserStatus;
 using MobileBackend.Application.Features.Users.Commands.UpdateUserRole;
 using MobileBackend.Application.Features.Users.Queries.GetAllUsers;
@@ -93,7 +94,8 @@ public class UsersController : BaseApiController
             Email = dto.Email,
             Password = dto.Password,
             FullName = dto.FullName,
-            PhoneNumber = dto.PhoneNumber
+            PhoneNumber = dto.PhoneNumber,
+            DefaultInventoryId = dto.DefaultInventoryId
         };
 
         var result = await Mediator.Send(command);
@@ -232,6 +234,32 @@ public class UsersController : BaseApiController
 
         return result.Success 
             ? OkResponse("User role updated successfully") 
+            : ErrorResponse(result);
+    }
+
+    /// <summary>
+    /// Set user's default inventory
+    /// </summary>
+    /// <param name="id">User ID</param>
+    /// <param name="request">Default inventory details</param>
+    /// <returns>Success response</returns>
+    [HttpPut("{id}/default-inventory")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public async Task<IActionResult> SetDefaultInventory(Guid id, [FromBody] SetDefaultInventoryDto request)
+    {
+        var command = new SetDefaultInventoryCommand
+        {
+            UserId = id,
+            DefaultInventoryId = request.DefaultInventoryId
+        };
+
+        var result = await Mediator.Send(command);
+
+        return result.Success 
+            ? OkResponse("User default inventory updated successfully") 
             : ErrorResponse(result);
     }
 }

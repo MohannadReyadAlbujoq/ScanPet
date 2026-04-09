@@ -26,8 +26,12 @@ public class UpdateItemCommandHandler : BaseUpdateHandler<UpdateItemCommand, Ite
 
     protected override Guid GetEntityId(UpdateItemCommand command) => command.ItemId;
 
-    protected override Task<Item?> GetEntityAsync(Guid id, CancellationToken cancellationToken)
-        => UnitOfWork.Items.GetByIdAsync(id, cancellationToken);
+    protected override async Task<Item?> GetEntityAsync(Guid id, CancellationToken cancellationToken)
+    {
+        // Use FirstOrDefaultAsync instead of FindAsync to avoid tracking issues
+        var items = await UnitOfWork.Items.FindAsync(i => i.Id == id && !i.IsDeleted, cancellationToken);
+        return items.FirstOrDefault();
+    }
 
     protected override async Task UpdateEntityPropertiesAsync(
         UpdateItemCommand command,
@@ -52,10 +56,10 @@ public class UpdateItemCommandHandler : BaseUpdateHandler<UpdateItemCommand, Ite
     protected override string GetAuditAction() => AuditActions.ItemUpdated;
 
     protected override string CaptureOldValues(Item entity)
-        => $"Name: {entity.Name}, Price: {entity.BasePrice}";
+        => $"Name: {entity.Name}, SKU: {entity.SKU}, Price: {entity.BasePrice}, ColorId: {entity.ColorId}, ImageUrl: {entity.ImageUrl}";
 
     protected override string CaptureNewValues(Item entity)
-        => $"Name: {entity.Name}, Price: {entity.BasePrice}";
+        => $"Name: {entity.Name}, SKU: {entity.SKU}, Price: {entity.BasePrice}, ColorId: {entity.ColorId}, ImageUrl: {entity.ImageUrl}";
 
     // Override validation to check color existence
     protected override async Task<Result<bool>> ValidateAsync(

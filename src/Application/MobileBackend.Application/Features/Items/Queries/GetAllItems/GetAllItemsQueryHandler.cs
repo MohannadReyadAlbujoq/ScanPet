@@ -71,6 +71,11 @@ public class GetAllItemsQueryHandler : IRequestHandler<GetAllItemsQuery, Result<
 
     private static ItemDto MapToDto(Item entity)
     {
+        var activeInventories = entity.ItemInventories?.Where(ii => !ii.IsDeleted).ToList();
+        var lastUpdatedInventory = activeInventories?
+            .OrderByDescending(ii => ii.UpdatedAt ?? ii.CreatedAt)
+            .FirstOrDefault();
+
         return new ItemDto
         {
             Id = entity.Id,
@@ -80,7 +85,11 @@ public class GetAllItemsQueryHandler : IRequestHandler<GetAllItemsQuery, Result<
             BasePrice = entity.BasePrice,
             ColorId = entity.ColorId,
             ColorName = entity.Color?.Name,
+            ColorHexCode = entity.Color?.HexCode,
             ImageUrl = entity.ImageUrl,
+            TotalCount = activeInventories?.Sum(ii => ii.Quantity) ?? 0,
+            LastUpdatedInventoryName = lastUpdatedInventory?.Inventory?.Name,
+            LastUpdatedInventoryDate = lastUpdatedInventory?.UpdatedAt ?? lastUpdatedInventory?.CreatedAt,
             CreatedAt = entity.CreatedAt,
             UpdatedAt = entity.UpdatedAt
         };

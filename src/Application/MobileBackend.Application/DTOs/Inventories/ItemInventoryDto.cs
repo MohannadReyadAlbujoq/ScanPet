@@ -9,6 +9,10 @@ public class ItemInventoryDto
     public Guid ItemId { get; set; }
     public string ItemName { get; set; } = string.Empty;
     public string? ItemSKU { get; set; }
+    public string? ItemImageUrl { get; set; }
+    public decimal? ItemBasePrice { get; set; }
+    public string? ColorName { get; set; }
+    public string? ColorHexCode { get; set; }
     public Guid InventoryId { get; set; }
     public string InventoryName { get; set; } = string.Empty;
     public int Quantity { get; set; }

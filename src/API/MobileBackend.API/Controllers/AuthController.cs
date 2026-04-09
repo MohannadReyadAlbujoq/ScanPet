@@ -6,6 +6,7 @@ using MobileBackend.Application.Features.Auth.Commands.Login;
 using MobileBackend.Application.Features.Auth.Commands.Logout;
 using MobileBackend.Application.Features.Auth.Commands.RefreshToken;
 using MobileBackend.Application.Features.Auth.Commands.Register;
+using MobileBackend.Application.Interfaces;
 
 namespace MobileBackend.API.Controllers;
 
@@ -20,11 +21,13 @@ public class AuthController : ControllerBase
 {
     private readonly IMediator _mediator;
     private readonly ILogger<AuthController> _logger;
+    private readonly IUnitOfWork _unitOfWork;
 
-    public AuthController(IMediator mediator, ILogger<AuthController> logger)
+    public AuthController(IMediator mediator, ILogger<AuthController> logger, IUnitOfWork unitOfWork)
     {
         _mediator = mediator;
         _logger = logger;
+        _unitOfWork = unitOfWork;
     }
 
     /// <summary>
@@ -203,21 +206,46 @@ public class AuthController : ControllerBase
     [Authorize]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    public IActionResult GetCurrentUser()
+    public async Task<IActionResult> GetCurrentUser()
     {
-        var userId = User.FindFirst("sub")?.Value;
-        var username = User.FindFirst("name")?.Value;
-        var email = User.FindFirst("email")?.Value;
+        var userIdClaim = User.FindFirst("sub")?.Value;
+        if (string.IsNullOrEmpty(userIdClaim) || !Guid.TryParse(userIdClaim, out var userId))
+        {
+            return Ok(new
+            {
+                success = true,
+                data = new
+                {
+                    userId = userIdClaim,
+                    username = User.FindFirst("name")?.Value,
+                    email = User.FindFirst("email")?.Value,
+                    isAuthenticated = User.Identity?.IsAuthenticated ?? false
+                }
+            });
+        }
+
+        var user = await _unitOfWork.Users.GetByIdWithRolesAsync(userId);
+        if (user == null)
+        {
+            return NotFound(new { success = false, message = "User not found" });
+        }
 
         return Ok(new
         {
             success = true,
             data = new
             {
-                userId,
-                username,
-                email,
-                isAuthenticated = User.Identity?.IsAuthenticated ?? false
+                userId = user.Id,
+                username = user.Username,
+                email = user.Email,
+                fullName = user.FullName,
+                phoneNumber = user.PhoneNumber,
+                isAuthenticated = true,
+                isEnabled = user.IsEnabled,
+                isApproved = user.IsApproved,
+                defaultInventoryId = user.DefaultInventoryId,
+                defaultInventoryName = user.DefaultInventory?.Name,
+                roles = user.UserRoles.Select(ur => ur.Role.Name).ToList()
             }
         });
     }

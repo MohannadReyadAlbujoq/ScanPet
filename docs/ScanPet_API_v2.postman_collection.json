@@ -1,0 +1,992 @@
+{
+  "info": {
+    "name": "ScanPet Mobile Backend API v2",
+    "description": "Complete API collection for ScanPet Mobile Backend v2.\n\nChanges in v2:\n- Items: File upload support (multipart/form-data) for create/update\n- Items: Enriched response with totalCount, colorHexCode, lastUpdatedInventoryName, lastUpdatedInventoryDate\n- Inventory Items: Now includes itemImageUrl, itemBasePrice, colorName, colorHexCode\n- Users: Default inventory support (defaultInventoryId, defaultInventoryName)\n- Auth: /me endpoint returns full user info including defaultInventoryId and roles\n- Auth: Login/refresh responses include defaultInventoryId in user info\n- Orders: Status filter on GET /api/orders (?status=0|1|2)\n- Orders: Refund details (refundedQuantity, refundedAmount, refundReason, refundedAt) in order item responses\n- Items Update: Fixed 500 error on PUT /api/items/{id}\n\nDefault credentials:\n- Admin: admin / Admin@123\n- Manager: manager / Manager@123\n- User: user / User@123\n\nAll endpoints (except auth) require Bearer token in Authorization header.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "https://scanpet-production.up.railway.app", "type": "string" },
+    { "key": "accessToken", "value": "", "type": "string" },
+    { "key": "refreshToken", "value": "", "type": "string" },
+    { "key": "userId", "value": "", "type": "string" },
+    { "key": "roleId", "value": "", "type": "string" },
+    { "key": "colorId", "value": "", "type": "string" },
+    { "key": "itemId", "value": "", "type": "string" },
+    { "key": "locationId", "value": "", "type": "string" },
+    { "key": "orderId", "value": "", "type": "string" },
+    { "key": "inventoryId", "value": "", "type": "string" }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }]
+  },
+  "item": [
+    {
+      "name": "Health Check",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/health", "host": ["{{baseUrl}}"], "path": ["health"] },
+            "auth": { "type": "noauth" }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Register",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"newuser\",\n  \"email\": \"newuser@example.com\",\n  \"password\": \"NewUser@123\",\n  \"confirmPassword\": \"NewUser@123\",\n  \"fullName\": \"New User\",\n  \"phoneNumber\": \"+962791234567\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/auth/register", "host": ["{{baseUrl}}"], "path": ["api", "auth", "register"] },
+            "auth": { "type": "noauth" }
+          }
+        },
+        {
+          "name": "Login (Admin)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.success && jsonData.data) {",
+                  "    pm.collectionVariables.set('accessToken', jsonData.data.accessToken);",
+                  "    pm.collectionVariables.set('refreshToken', jsonData.data.refreshToken);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"usernameOrEmail\": \"admin\",\n  \"password\": \"Admin@123\",\n  \"deviceInfo\": \"Postman\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/auth/login", "host": ["{{baseUrl}}"], "path": ["api", "auth", "login"] },
+            "auth": { "type": "noauth" },
+            "description": "v2: Response user object now includes defaultInventoryId and defaultInventoryName"
+          }
+        },
+        {
+          "name": "Login (Manager)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.success && jsonData.data) {",
+                  "    pm.collectionVariables.set('accessToken', jsonData.data.accessToken);",
+                  "    pm.collectionVariables.set('refreshToken', jsonData.data.refreshToken);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"usernameOrEmail\": \"manager\",\n  \"password\": \"Manager@123\",\n  \"deviceInfo\": \"Postman\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/auth/login", "host": ["{{baseUrl}}"], "path": ["api", "auth", "login"] },
+            "auth": { "type": "noauth" }
+          }
+        },
+        {
+          "name": "Login (User)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.success && jsonData.data) {",
+                  "    pm.collectionVariables.set('accessToken', jsonData.data.accessToken);",
+                  "    pm.collectionVariables.set('refreshToken', jsonData.data.refreshToken);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"usernameOrEmail\": \"user\",\n  \"password\": \"User@123\",\n  \"deviceInfo\": \"Postman\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/auth/login", "host": ["{{baseUrl}}"], "path": ["api", "auth", "login"] },
+            "auth": { "type": "noauth" }
+          }
+        },
+        {
+          "name": "Refresh Token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.success && jsonData.data) {",
+                  "    pm.collectionVariables.set('accessToken', jsonData.data.accessToken);",
+                  "    pm.collectionVariables.set('refreshToken', jsonData.data.refreshToken);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\",\n  \"deviceInfo\": \"Postman\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/auth/refresh", "host": ["{{baseUrl}}"], "path": ["api", "auth", "refresh"] },
+            "auth": { "type": "noauth" }
+          }
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "\"{{refreshToken}}\""
+            },
+            "url": { "raw": "{{baseUrl}}/api/auth/logout", "host": ["{{baseUrl}}"], "path": ["api", "auth", "logout"] }
+          }
+        },
+        {
+          "name": "Get Current User (Me) - v2 enriched",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/auth/me", "host": ["{{baseUrl}}"], "path": ["api", "auth", "me"] },
+            "description": "v2: Now fetches full user from DB. Returns userId, username, email, fullName, phoneNumber, isAuthenticated, isEnabled, isApproved, defaultInventoryId, defaultInventoryName, roles[]"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Users",
+      "item": [
+        {
+          "name": "Get All Users (Paginated)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/users?pageNumber=1&pageSize=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "users"],
+              "query": [
+                { "key": "pageNumber", "value": "1" },
+                { "key": "pageSize", "value": "10" }
+              ]
+            },
+            "description": "v2: Response now includes defaultInventoryId and defaultInventoryName per user"
+          }
+        },
+        {
+          "name": "Get User By ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/users/{{userId}}", "host": ["{{baseUrl}}"], "path": ["api", "users", "{{userId}}"] },
+            "description": "v2: Response now includes defaultInventoryId and defaultInventoryName"
+          }
+        },
+        {
+          "name": "Create User",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.success && jsonData.data) {",
+                  "    pm.collectionVariables.set('userId', jsonData.data);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"testuser\",\n  \"email\": \"testuser@example.com\",\n  \"password\": \"Test@12345\",\n  \"fullName\": \"Test User\",\n  \"phoneNumber\": \"+962791234567\",\n  \"defaultInventoryId\": null\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/users", "host": ["{{baseUrl}}"], "path": ["api", "users"] },
+            "description": "v2: Now supports optional defaultInventoryId field"
+          }
+        },
+        {
+          "name": "Set Default Inventory (v2 NEW)",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"defaultInventoryId\": \"{{inventoryId}}\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/users/{{userId}}/default-inventory", "host": ["{{baseUrl}}"], "path": ["api", "users", "{{userId}}", "default-inventory"] },
+            "description": "v2 NEW: Set the user's default inventory/warehouse. Send null to clear."
+          }
+        },
+        {
+          "name": "Clear Default Inventory",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"defaultInventoryId\": null\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/users/{{userId}}/default-inventory", "host": ["{{baseUrl}}"], "path": ["api", "users", "{{userId}}", "default-inventory"] },
+            "description": "v2: Clear user's default inventory by setting null"
+          }
+        },
+        {
+          "name": "Activate User",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/users/{{userId}}/activate", "host": ["{{baseUrl}}"], "path": ["api", "users", "{{userId}}", "activate"] }
+          }
+        },
+        {
+          "name": "Deactivate User",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/users/{{userId}}/deactivate", "host": ["{{baseUrl}}"], "path": ["api", "users", "{{userId}}", "deactivate"] }
+          }
+        },
+        {
+          "name": "Enable User",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/users/{{userId}}/enable", "host": ["{{baseUrl}}"], "path": ["api", "users", "{{userId}}", "enable"] }
+          }
+        },
+        {
+          "name": "Disable User",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/users/{{userId}}/disable", "host": ["{{baseUrl}}"], "path": ["api", "users", "{{userId}}", "disable"] }
+          }
+        },
+        {
+          "name": "Update User Role",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"roleId\": \"{{roleId}}\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/users/{{userId}}/role", "host": ["{{baseUrl}}"], "path": ["api", "users", "{{userId}}", "role"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Roles",
+      "item": [
+        {
+          "name": "Get All Roles",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/roles", "host": ["{{baseUrl}}"], "path": ["api", "roles"] }
+          }
+        },
+        {
+          "name": "Get Role By ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/roles/{{roleId}}", "host": ["{{baseUrl}}"], "path": ["api", "roles", "{{roleId}}"] }
+          }
+        },
+        {
+          "name": "Create Role",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.success && jsonData.data) {",
+                  "    pm.collectionVariables.set('roleId', jsonData.data);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Supervisor\",\n  \"description\": \"Shift supervisor role\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/roles", "host": ["{{baseUrl}}"], "path": ["api", "roles"] }
+          }
+        },
+        {
+          "name": "Update Role",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Supervisor Updated\",\n  \"description\": \"Updated supervisor role\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/roles/{{roleId}}", "host": ["{{baseUrl}}"], "path": ["api", "roles", "{{roleId}}"] }
+          }
+        },
+        {
+          "name": "Delete Role",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/roles/{{roleId}}", "host": ["{{baseUrl}}"], "path": ["api", "roles", "{{roleId}}"] }
+          }
+        },
+        {
+          "name": "Assign Permissions to Role",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"roleId\": \"{{roleId}}\",\n  \"permissions\": [\n    \"ColorCreate\",\n    \"ColorEdit\",\n    \"ColorView\",\n    \"ItemView\",\n    \"OrderCreate\",\n    \"OrderView\"\n  ]\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/roles/{{roleId}}/permissions", "host": ["{{baseUrl}}"], "path": ["api", "roles", "{{roleId}}", "permissions"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Colors",
+      "item": [
+        {
+          "name": "Get All Colors",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/colors", "host": ["{{baseUrl}}"], "path": ["api", "colors"] }
+          }
+        },
+        {
+          "name": "Search Colors",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/colors/search?searchTerm=red&pageNumber=1&pageSize=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "colors", "search"],
+              "query": [
+                { "key": "searchTerm", "value": "red" },
+                { "key": "pageNumber", "value": "1" },
+                { "key": "pageSize", "value": "10" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Color By ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/colors/{{colorId}}", "host": ["{{baseUrl}}"], "path": ["api", "colors", "{{colorId}}"] }
+          }
+        },
+        {
+          "name": "Create Color",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.success && jsonData.data) {",
+                  "    pm.collectionVariables.set('colorId', jsonData.data);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Ocean Blue\",\n  \"description\": \"Deep ocean blue\",\n  \"redValue\": 0,\n  \"greenValue\": 105,\n  \"blueValue\": 180\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/colors", "host": ["{{baseUrl}}"], "path": ["api", "colors"] }
+          }
+        },
+        {
+          "name": "Update Color",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Sky Blue\",\n  \"description\": \"Light sky blue\",\n  \"redValue\": 135,\n  \"greenValue\": 206,\n  \"blueValue\": 235\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/colors/{{colorId}}", "host": ["{{baseUrl}}"], "path": ["api", "colors", "{{colorId}}"] }
+          }
+        },
+        {
+          "name": "Delete Color",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/colors/{{colorId}}", "host": ["{{baseUrl}}"], "path": ["api", "colors", "{{colorId}}"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Items",
+      "item": [
+        {
+          "name": "Get All Items (Paginated) - v2 enriched",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/items?pageNumber=1&pageSize=5",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "items"],
+              "query": [
+                { "key": "pageNumber", "value": "1" },
+                { "key": "pageSize", "value": "5" }
+              ]
+            },
+            "description": "v2: Response now includes colorHexCode, totalCount, lastUpdatedInventoryName, lastUpdatedInventoryDate per item"
+          }
+        },
+        {
+          "name": "Get Items Page 2",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/items?pageNumber=2&pageSize=5",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "items"],
+              "query": [
+                { "key": "pageNumber", "value": "2" },
+                { "key": "pageSize", "value": "5" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Items By Inventory (Filter)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/items?pageNumber=1&pageSize=10&inventoryId={{inventoryId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "items"],
+              "query": [
+                { "key": "pageNumber", "value": "1" },
+                { "key": "pageSize", "value": "10" },
+                { "key": "inventoryId", "value": "{{inventoryId}}" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Item By ID - v2 enriched",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/items/{{itemId}}", "host": ["{{baseUrl}}"], "path": ["api", "items", "{{itemId}}"] },
+            "description": "v2: Response includes colorHexCode, totalCount (sum across all inventories), lastUpdatedInventoryName, lastUpdatedInventoryDate"
+          }
+        },
+        {
+          "name": "Create Item (multipart/form-data with Image) - v2",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.success && jsonData.id) {",
+                  "    pm.collectionVariables.set('itemId', jsonData.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "name", "value": "Pet Food Premium", "type": "text" },
+                { "key": "description", "value": "High-quality pet food", "type": "text" },
+                { "key": "sku", "value": "PF-NEW-001", "type": "text" },
+                { "key": "basePrice", "value": "29.99", "type": "text" },
+                { "key": "colorId", "value": "", "type": "text", "disabled": true, "description": "Optional: set to a valid color GUID" },
+                { "key": "image", "type": "file", "src": [], "description": "Optional: item image file (jpg/png)" }
+              ]
+            },
+            "url": { "raw": "{{baseUrl}}/api/items", "host": ["{{baseUrl}}"], "path": ["api", "items"] },
+            "description": "v2: Now uses multipart/form-data. Optionally upload an image file. Image is saved to /uploads/items/ and URL returned in GET responses."
+          }
+        },
+        {
+          "name": "Update Item (multipart/form-data with Image) - v2 FIXED",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "name", "value": "Pet Food Premium v2", "type": "text" },
+                { "key": "description", "value": "Updated high-quality pet food", "type": "text" },
+                { "key": "sku", "value": "PF-NEW-001", "type": "text" },
+                { "key": "basePrice", "value": "34.99", "type": "text" },
+                { "key": "colorId", "value": "", "type": "text", "disabled": true, "description": "Optional: set to a valid color GUID" },
+                { "key": "imageUrl", "value": "", "type": "text", "description": "Pass existing imageUrl from GET to preserve current image. Leave empty + upload new file to replace." },
+                { "key": "image", "type": "file", "src": [], "description": "Optional: new image file. If not uploaded, existing imageUrl is preserved." }
+              ]
+            },
+            "url": { "raw": "{{baseUrl}}/api/items/{{itemId}}", "host": ["{{baseUrl}}"], "path": ["api", "items", "{{itemId}}"] },
+            "description": "v2 FIXED: Uses multipart/form-data. If no new image is uploaded, send the existing imageUrl field to preserve it. Old file is never deleted from disk."
+          }
+        },
+        {
+          "name": "Delete Item",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/items/{{itemId}}", "host": ["{{baseUrl}}"], "path": ["api", "items", "{{itemId}}"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Locations",
+      "item": [
+        {
+          "name": "Get All Locations",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/locations", "host": ["{{baseUrl}}"], "path": ["api", "locations"] }
+          }
+        },
+        {
+          "name": "Get Location By ID (with Sections)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/locations/{{locationId}}", "host": ["{{baseUrl}}"], "path": ["api", "locations", "{{locationId}}"] }
+          }
+        },
+        {
+          "name": "Create Location",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.success && jsonData.data) {",
+                  "    pm.collectionVariables.set('locationId', jsonData.data);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Main Store\",\n  \"address\": \"123 Pet Street\",\n  \"city\": \"Amman\",\n  \"country\": \"Jordan\",\n  \"postalCode\": \"11183\",\n  \"isActive\": true\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/locations", "host": ["{{baseUrl}}"], "path": ["api", "locations"] }
+          }
+        },
+        {
+          "name": "Update Location",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Main Store Updated\",\n  \"address\": \"456 New Pet Street\",\n  \"city\": \"Amman\",\n  \"country\": \"Jordan\",\n  \"postalCode\": \"11184\",\n  \"isActive\": true\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/locations/{{locationId}}", "host": ["{{baseUrl}}"], "path": ["api", "locations", "{{locationId}}"] }
+          }
+        },
+        {
+          "name": "Delete Location",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/locations/{{locationId}}", "host": ["{{baseUrl}}"], "path": ["api", "locations", "{{locationId}}"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Inventories (Sections)",
+      "item": [
+        {
+          "name": "Create Inventory/Section",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.success && jsonData.data) {",
+                  "    pm.collectionVariables.set('inventoryId', jsonData.data);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Main Warehouse\",\n  \"location\": \"Industrial Zone, Amman\",\n  \"description\": \"Primary storage facility\",\n  \"isActive\": true,\n  \"locationId\": \"{{locationId}}\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/inventories", "host": ["{{baseUrl}}"], "path": ["api", "inventories"] }
+          }
+        },
+        {
+          "name": "Get All Inventories",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/inventories", "host": ["{{baseUrl}}"], "path": ["api", "inventories"] }
+          }
+        },
+        {
+          "name": "Get Inventory By ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/inventories/{{inventoryId}}", "host": ["{{baseUrl}}"], "path": ["api", "inventories", "{{inventoryId}}"] }
+          }
+        },
+        {
+          "name": "Update Inventory",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Main Warehouse Updated\",\n  \"location\": \"New Industrial Zone\",\n  \"description\": \"Updated primary storage\",\n  \"isActive\": true,\n  \"locationId\": \"{{locationId}}\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/inventories/{{inventoryId}}", "host": ["{{baseUrl}}"], "path": ["api", "inventories", "{{inventoryId}}"] }
+          }
+        },
+        {
+          "name": "Delete Inventory",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/inventories/{{inventoryId}}", "host": ["{{baseUrl}}"], "path": ["api", "inventories", "{{inventoryId}}"] }
+          }
+        },
+        {
+          "name": "Get Items in Inventory - v2 enriched",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/inventories/{{inventoryId}}/items", "host": ["{{baseUrl}}"], "path": ["api", "inventories", "{{inventoryId}}", "items"] },
+            "description": "v2: Response now includes itemImageUrl, itemBasePrice, colorName, colorHexCode per item"
+          }
+        },
+        {
+          "name": "Get Item Stock Across Warehouses - v2 enriched",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/inventories/items/{{itemId}}", "host": ["{{baseUrl}}"], "path": ["api", "inventories", "items", "{{itemId}}"] },
+            "description": "v2: Response now includes itemImageUrl, itemBasePrice, colorName, colorHexCode"
+          }
+        },
+        {
+          "name": "Get Active Inventories",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/inventories/active", "host": ["{{baseUrl}}"], "path": ["api", "inventories", "active"] }
+          }
+        },
+        {
+          "name": "Get Low Stock Items - v2 enriched",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/inventories/low-stock", "host": ["{{baseUrl}}"], "path": ["api", "inventories", "low-stock"] },
+            "description": "v2: Response now includes itemImageUrl, itemBasePrice, colorName, colorHexCode"
+          }
+        },
+        {
+          "name": "Set Item Inventory",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"itemId\": \"{{itemId}}\",\n  \"inventoryId\": \"{{inventoryId}}\",\n  \"quantity\": 100,\n  \"minimumQuantity\": 10,\n  \"maximumQuantity\": 500,\n  \"notes\": \"Initial stock\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/inventories/items", "host": ["{{baseUrl}}"], "path": ["api", "inventories", "items"] }
+          }
+        },
+        {
+          "name": "Update Item Quantity (PUT)",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"itemId\": \"{{itemId}}\",\n  \"inventoryId\": \"{{inventoryId}}\",\n  \"quantity\": 100,\n  \"minimumQuantity\": 10,\n  \"maximumQuantity\": 500,\n  \"notes\": \"Updated stock\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/inventories/items", "host": ["{{baseUrl}}"], "path": ["api", "inventories", "items"] }
+          }
+        },
+        {
+          "name": "Increment Inventory",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"itemId\": \"{{itemId}}\",\n  \"inventoryId\": \"{{inventoryId}}\",\n  \"quantity\": 10,\n  \"notes\": \"Restocking\",\n  \"reason\": \"Weekly supply delivery\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/inventories/increment", "host": ["{{baseUrl}}"], "path": ["api", "inventories", "increment"] }
+          }
+        },
+        {
+          "name": "Decrement Inventory",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"itemId\": \"{{itemId}}\",\n  \"inventoryId\": \"{{inventoryId}}\",\n  \"quantity\": 1,\n  \"notes\": \"Manual removal\",\n  \"reason\": \"Damaged goods\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/inventories/decrement", "host": ["{{baseUrl}}"], "path": ["api", "inventories", "decrement"] }
+          }
+        },
+        {
+          "name": "Adjust Inventory",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"itemId\": \"{{itemId}}\",\n  \"inventoryId\": \"{{inventoryId}}\",\n  \"quantityChange\": -5,\n  \"notes\": \"Damaged goods removed\",\n  \"reason\": \"Quality control\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/inventories/adjust", "host": ["{{baseUrl}}"], "path": ["api", "inventories", "adjust"] }
+          }
+        },
+        {
+          "name": "Transfer Between Warehouses",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"itemId\": \"{{itemId}}\",\n  \"fromInventoryId\": \"{{inventoryId}}\",\n  \"toInventoryId\": \"REPLACE_WITH_TARGET_INVENTORY_ID\",\n  \"quantity\": 25,\n  \"notes\": \"Rebalancing stock\",\n  \"reason\": \"Customer demand shift\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/inventories/transfer", "host": ["{{baseUrl}}"], "path": ["api", "inventories", "transfer"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Orders",
+      "item": [
+        {
+          "name": "Get All Orders (Paginated)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/orders?pageNumber=1&pageSize=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "orders"],
+              "query": [
+                { "key": "pageNumber", "value": "1" },
+                { "key": "pageSize", "value": "10" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Orders - Filter by Status (Pending) - v2 NEW",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/orders?pageNumber=1&pageSize=10&status=0",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "orders"],
+              "query": [
+                { "key": "pageNumber", "value": "1" },
+                { "key": "pageSize", "value": "10" },
+                { "key": "status", "value": "0", "description": "0=Pending, 1=Confirmed, 2=Cancelled" }
+              ]
+            },
+            "description": "v2 NEW: Filter orders by status. 0=Pending, 1=Confirmed, 2=Cancelled"
+          }
+        },
+        {
+          "name": "Get Orders - Filter by Status (Confirmed)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/orders?pageNumber=1&pageSize=10&status=1",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "orders"],
+              "query": [
+                { "key": "pageNumber", "value": "1" },
+                { "key": "pageSize", "value": "10" },
+                { "key": "status", "value": "1", "description": "0=Pending, 1=Confirmed, 2=Cancelled" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Orders - Filter by Status (Cancelled)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/orders?pageNumber=1&pageSize=10&status=2",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "orders"],
+              "query": [
+                { "key": "pageNumber", "value": "1" },
+                { "key": "pageSize", "value": "10" },
+                { "key": "status", "value": "2", "description": "0=Pending, 1=Confirmed, 2=Cancelled" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Order By ID (with Refund Details) - v2 enriched",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/orders/{{orderId}}", "host": ["{{baseUrl}}"], "path": ["api", "orders", "{{orderId}}"] },
+            "description": "v2: Each order item now includes id, itemId, itemName, serialNumber, quantity, unitPrice, totalPrice, status, statusName, refundedQuantity, refundedAmount, refundReason, refundedAt"
+          }
+        },
+        {
+          "name": "Create Order",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.success && jsonData.data) {",
+                  "    pm.collectionVariables.set('orderId', jsonData.data);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"clientName\": \"Ahmad Ali\",\n  \"clientPhone\": \"+962791234567\",\n  \"locationId\": \"{{locationId}}\",\n  \"description\": \"Rush order\",\n  \"orderItems\": [\n    {\n      \"itemId\": \"{{itemId}}\",\n      \"quantity\": 2,\n      \"unitPrice\": 29.99\n    }\n  ]\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/orders", "host": ["{{baseUrl}}"], "path": ["api", "orders"] }
+          }
+        },
+        {
+          "name": "Confirm Order",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/orders/{{orderId}}/confirm", "host": ["{{baseUrl}}"], "path": ["api", "orders", "{{orderId}}", "confirm"] }
+          }
+        },
+        {
+          "name": "Cancel Order",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/orders/{{orderId}}/cancel?reason=Out of stock",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "orders", "{{orderId}}", "cancel"],
+              "query": [{ "key": "reason", "value": "Out of stock" }]
+            }
+          }
+        },
+        {
+          "name": "Refund Order Item",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refundQuantity\": 1,\n  \"refundReason\": \"Defective product\",\n  \"refundToInventoryId\": \"{{inventoryId}}\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/orders/refund/REPLACE_WITH_SKU", "host": ["{{baseUrl}}"], "path": ["api", "orders", "refund", "REPLACE_WITH_SKU"] },
+            "description": "After refund, GET order by ID will show refundedQuantity, refundedAmount, refundReason, refundedAt on the affected order items"
+          }
+        }
+      ]
+    }
+  ]
+}

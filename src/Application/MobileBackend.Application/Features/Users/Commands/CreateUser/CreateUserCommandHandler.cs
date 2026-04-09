@@ -44,6 +44,7 @@ public class CreateUserCommandHandler : BaseCreateHandler<CreateUserCommand, Use
             PasswordHash = passwordHash,
             FullName = command.FullName,
             PhoneNumber = command.PhoneNumber,
+            DefaultInventoryId = command.DefaultInventoryId,
             IsEnabled = false, // Disabled by default
             IsApproved = false, // Not approved by default
             IsDeleted = false

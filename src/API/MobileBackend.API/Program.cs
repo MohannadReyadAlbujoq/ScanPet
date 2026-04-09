@@ -77,6 +77,7 @@ try
     builder.Services.AddHttpContextAccessor(); // Required for CurrentUserService
     builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
     builder.Services.AddScoped<ILoggerService, LoggerService>();
+    builder.Services.AddSingleton<MobileBackend.Application.Common.Interfaces.IFileService, MobileBackend.API.Services.FileService>();
 
     // 5. JWT Authentication Configuration
     var jwtSettings = builder.Configuration.GetSection("JwtSettings");
@@ -240,6 +241,9 @@ try
     {
         app.UseHttpsRedirection();
     }
+
+    // 4.5. Static Files (for uploaded images)
+    app.UseStaticFiles();
 
     // 5. CORS
     app.UseCors("AllowAll");

@@ -36,6 +36,8 @@ public class GetAllUsersQueryHandler : IRequestHandler<GetAllUsersQuery, Result<
             PhoneNumber = user.PhoneNumber,
             IsEnabled = user.IsEnabled,
             IsApproved = user.IsApproved,
+            DefaultInventoryId = user.DefaultInventoryId,
+            DefaultInventoryName = user.DefaultInventory?.Name,
             Roles = user.UserRoles.Select(ur => ur.Role.Name).ToList(),
             CreatedAt = user.CreatedAt,
             UpdatedAt = user.UpdatedAt

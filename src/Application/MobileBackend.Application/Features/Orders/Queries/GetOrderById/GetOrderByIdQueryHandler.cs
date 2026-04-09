@@ -54,7 +54,11 @@ public class GetOrderByIdQueryHandler : BaseGetByIdHandler<GetOrderByIdQuery, Or
                 UnitPrice = oi.SalePrice,
                 TotalPrice = oi.SalePrice * oi.Quantity,
                 Status = (int)oi.Status,
-                StatusName = oi.Status.ToString()
+                StatusName = oi.Status.ToString(),
+                RefundedQuantity = oi.RefundedQuantity,
+                RefundedAmount = oi.RefundedQuantity > 0 ? oi.SalePrice * oi.RefundedQuantity : null,
+                RefundReason = oi.RefundReason,
+                RefundedAt = oi.RefundedAt
             }).ToList(),
             CreatedAt = entity.CreatedAt,
             UpdatedAt = entity.UpdatedAt

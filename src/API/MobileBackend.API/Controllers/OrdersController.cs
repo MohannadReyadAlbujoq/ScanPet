@@ -26,20 +26,22 @@ public class OrdersController : BaseApiController
     }
 
     /// <summary>
-    /// Get all orders
+    /// Get all orders with optional pagination and status filter
     /// </summary>
     /// <param name="pageNumber">Page number (optional)</param>
     /// <param name="pageSize">Page size (optional)</param>
+    /// <param name="status">Filter by status: 0=Pending, 1=Confirmed, 2=Cancelled (optional)</param>
     /// <returns>List of all orders</returns>
     [HttpGet]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    public async Task<IActionResult> GetAll([FromQuery] int? pageNumber, [FromQuery] int? pageSize)
+    public async Task<IActionResult> GetAll([FromQuery] int? pageNumber, [FromQuery] int? pageSize, [FromQuery] int? status)
     {
         var query = new GetAllOrdersQuery
         {
             PageNumber = pageNumber,
-            PageSize = pageSize
+            PageSize = pageSize,
+            Status = status
         };
         var result = await Mediator.Send(query);
 

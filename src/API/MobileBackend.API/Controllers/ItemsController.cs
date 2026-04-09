@@ -2,6 +2,7 @@ using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MobileBackend.API.Controllers.Base;
+using MobileBackend.Application.Common.Interfaces;
 using MobileBackend.Application.DTOs.Items;
 using MobileBackend.Application.Features.Items.Commands.CreateItem;
 using MobileBackend.Application.Features.Items.Commands.DeleteItem;
@@ -18,9 +19,12 @@ namespace MobileBackend.API.Controllers;
 [Route("api/[controller]")]
 public class ItemsController : BaseApiController
 {
-    public ItemsController(IMediator mediator, ILogger<ItemsController> logger)
+    private readonly IFileService _fileService;
+
+    public ItemsController(IMediator mediator, ILogger<ItemsController> logger, IFileService fileService)
         : base(mediator, logger)
     {
+        _fileService = fileService;
     }
 
     /// <summary>
@@ -71,24 +75,43 @@ public class ItemsController : BaseApiController
     }
 
     /// <summary>
-    /// Create a new item
+    /// Create a new item (supports file upload via multipart/form-data)
     /// </summary>
-    /// <param name="dto">Item creation data</param>
+    /// <param name="name">Item name</param>
+    /// <param name="description">Item description</param>
+    /// <param name="sku">Stock Keeping Unit</param>
+    /// <param name="basePrice">Base price</param>
+    /// <param name="colorId">Color ID</param>
+    /// <param name="image">Image file</param>
     /// <returns>Created item ID</returns>
     [HttpPost]
     [ProducesResponseType(StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    public async Task<IActionResult> Create([FromBody] ItemDto dto)
+    [Consumes("multipart/form-data")]
+    public async Task<IActionResult> Create(
+        [FromForm] string name,
+        [FromForm] string? description,
+        [FromForm] string? sku,
+        [FromForm] decimal basePrice,
+        [FromForm] Guid? colorId,
+        IFormFile? image)
     {
+        string? imageUrl = null;
+        if (image != null && image.Length > 0)
+        {
+            using var stream = image.OpenReadStream();
+            imageUrl = await _fileService.SaveFileAsync(stream, image.FileName, "items");
+        }
+
         var command = new CreateItemCommand
         {
-            Name = dto.Name ?? string.Empty,
-            Description = dto.Description,
-            SKU = dto.SKU,
-            BasePrice = dto.BasePrice ?? 0,
-            ColorId = dto.ColorId,
-            ImageUrl = dto.ImageUrl
+            Name = name,
+            Description = description,
+            SKU = sku,
+            BasePrice = basePrice,
+            ColorId = colorId,
+            ImageUrl = imageUrl
         };
 
         var result = await Mediator.Send(command);
@@ -99,27 +122,52 @@ public class ItemsController : BaseApiController
     }
 
     /// <summary>
-    /// Update an existing item
+    /// Update an existing item (supports file upload via multipart/form-data)
+    /// If no new image is uploaded, the existing image is preserved.
+    /// If a new image is uploaded, the old file is NOT deleted (preserved).
     /// </summary>
     /// <param name="id">Item ID</param>
-    /// <param name="dto">Updated item data</param>
+    /// <param name="name">Item name</param>
+    /// <param name="description">Item description</param>
+    /// <param name="sku">Stock Keeping Unit</param>
+    /// <param name="basePrice">Base price</param>
+    /// <param name="colorId">Color ID</param>
+    /// <param name="imageUrl">Existing image URL (preserved if no new file)</param>
+    /// <param name="image">New image file (optional)</param>
     /// <returns>Success response</returns>
     [HttpPut("{id}")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    public async Task<IActionResult> Update(Guid id, [FromBody] ItemDto dto)
+    [Consumes("multipart/form-data")]
+    public async Task<IActionResult> Update(
+        Guid id,
+        [FromForm] string name,
+        [FromForm] string? description,
+        [FromForm] string? sku,
+        [FromForm] decimal basePrice,
+        [FromForm] Guid? colorId,
+        [FromForm] string? imageUrl,
+        IFormFile? image)
     {
+        string? finalImageUrl = imageUrl;
+
+        if (image != null && image.Length > 0)
+        {
+            using var stream = image.OpenReadStream();
+            finalImageUrl = await _fileService.SaveFileAsync(stream, image.FileName, "items");
+        }
+
         var command = new UpdateItemCommand
         {
             ItemId = id,
-            Name = dto.Name ?? string.Empty,
-            Description = dto.Description,
-            SKU = dto.SKU,
-            BasePrice = dto.BasePrice ?? 0,
-            ColorId = dto.ColorId,
-            ImageUrl = dto.ImageUrl
+            Name = name,
+            Description = description,
+            SKU = sku,
+            BasePrice = basePrice,
+            ColorId = colorId,
+            ImageUrl = finalImageUrl
         };
 
         var result = await Mediator.Send(command);
