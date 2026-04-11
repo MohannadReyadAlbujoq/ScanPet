@@ -51,10 +51,10 @@ public class UpdateInventoryCommandHandler : BaseUpdateHandler<UpdateInventoryCo
     protected override string GetAuditAction() => AuditActions.InventoryUpdated;
 
     protected override string CaptureOldValues(Inventory entity)
-        => $"Name: {entity.Name}, Location: {entity.Location}, IsActive: {entity.IsActive}, LocationId: {entity.LocationId}";
+        => $"{{\"name\":\"{entity.Name}\",\"location\":\"{entity.Location}\",\"isActive\":{entity.IsActive.ToString().ToLower()},\"locationId\":\"{entity.LocationId}\"}}";
 
     protected override string CaptureNewValues(Inventory entity)
-        => $"Name: {entity.Name}, Location: {entity.Location}, IsActive: {entity.IsActive}, LocationId: {entity.LocationId}";
+        => $"{{\"name\":\"{entity.Name}\",\"location\":\"{entity.Location}\",\"isActive\":{entity.IsActive.ToString().ToLower()},\"locationId\":\"{entity.LocationId}\"}}";
 
     // Override uniqueness validation
     protected override async Task<Result<bool>> ValidateUniquenessAsync(

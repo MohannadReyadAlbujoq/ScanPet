@@ -51,10 +51,10 @@ public class UpdateColorCommandHandler : BaseUpdateHandler<UpdateColorCommand, C
     protected override string GetAuditAction() => AuditActions.ColorUpdated;
 
     protected override string CaptureOldValues(Color entity)
-        => $"Name: {entity.Name}, RGB: ({entity.RedValue}, {entity.GreenValue}, {entity.BlueValue})";
+        => $"{{\"name\":\"{entity.Name}\",\"red\":{entity.RedValue},\"green\":{entity.GreenValue},\"blue\":{entity.BlueValue}}}";
 
     protected override string CaptureNewValues(Color entity)
-        => $"Name: {entity.Name}, RGB: ({entity.RedValue}, {entity.GreenValue}, {entity.BlueValue})";
+        => $"{{\"name\":\"{entity.Name}\",\"red\":{entity.RedValue},\"green\":{entity.GreenValue},\"blue\":{entity.BlueValue}}}";
 
     // Override uniqueness validation
     protected override async Task<Result<bool>> ValidateUniquenessAsync(

@@ -166,20 +166,22 @@ public abstract class BaseUpdateHandler<TCommand, TEntity> : IRequestHandler<TCo
     
     /// <summary>
     /// Capture old values before update for audit logging
+    /// Must return valid JSON (stored in PostgreSQL jsonb column)
     /// Override this to customize what values are captured
     /// </summary>
     protected virtual string CaptureOldValues(TEntity entity)
     {
-        return $"Entity: {GetEntityName()}, Id: {entity.Id}";
+        return $"{{\"entity\":\"{GetEntityName()}\",\"id\":\"{entity.Id}\"}}";
     }
 
     /// <summary>
     /// Capture new values after update for audit logging
+    /// Must return valid JSON (stored in PostgreSQL jsonb column)
     /// Override this to customize what values are captured
     /// </summary>
     protected virtual string CaptureNewValues(TEntity entity)
     {
-        return $"Entity: {GetEntityName()}, Id: {entity.Id}, Updated: {DateTimeService.UtcNow}";
+        return $"{{\"entity\":\"{GetEntityName()}\",\"id\":\"{entity.Id}\",\"updatedAt\":\"{DateTimeService.UtcNow:O}\"}}";
     }
 
     /// <summary>

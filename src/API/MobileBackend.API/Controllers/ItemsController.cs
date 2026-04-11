@@ -221,6 +221,7 @@ public class ItemsController : BaseApiController
         {
             dto.ImageUrl = $"{BuildBaseUrl()}{dto.ImageUrl}";
         }
+        // Cloudinary URLs are already absolute — no transformation needed
     }
 
     private void ResolveImageUrls(IEnumerable<ItemDto> items)

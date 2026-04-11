@@ -53,10 +53,10 @@ public class UpdateLocationCommandHandler : BaseUpdateHandler<UpdateLocationComm
     protected override string GetAuditAction() => AuditActions.LocationUpdated;
 
     protected override string CaptureOldValues(Location entity)
-        => $"Name: {entity.Name}, Address: {entity.Address}, City: {entity.City}";
+        => $"{{\"name\":\"{entity.Name}\",\"address\":\"{entity.Address}\",\"city\":\"{entity.City}\"}}";
 
     protected override string CaptureNewValues(Location entity)
-        => $"Name: {entity.Name}, Address: {entity.Address}, City: {entity.City}";
+        => $"{{\"name\":\"{entity.Name}\",\"address\":\"{entity.Address}\",\"city\":\"{entity.City}\"}}";
 
     // Override uniqueness validation
     protected override async Task<Result<bool>> ValidateUniquenessAsync(

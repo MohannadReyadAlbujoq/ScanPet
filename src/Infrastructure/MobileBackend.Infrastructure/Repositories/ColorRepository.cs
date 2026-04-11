@@ -14,7 +14,7 @@ public class ColorRepository : GenericRepository<Color>, IColorRepository
     public async Task<Color?> GetByNameAsync(string name, CancellationToken cancellationToken = default)
     {
         return await _dbSet
-            .FirstOrDefaultAsync(c => c.Name == name, cancellationToken);
+            .FirstOrDefaultAsync(c => c.Name == name && !c.IsDeleted, cancellationToken);
     }
 
     public async Task<IEnumerable<Color>> GetActiveColorsAsync(CancellationToken cancellationToken = default)
@@ -27,7 +27,7 @@ public class ColorRepository : GenericRepository<Color>, IColorRepository
 
     public async Task<bool> IsColorNameAvailableAsync(string name, CancellationToken cancellationToken = default)
     {
-        return !await _dbSet.AnyAsync(c => c.Name == name, cancellationToken);
+        return !await _dbSet.AnyAsync(c => c.Name == name && !c.IsDeleted, cancellationToken);
     }
 
     // Get all colors with item counts (efficient - single query with aggregation)

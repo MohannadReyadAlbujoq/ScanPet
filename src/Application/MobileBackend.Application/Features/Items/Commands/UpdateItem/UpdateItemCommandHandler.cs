@@ -56,10 +56,10 @@ public class UpdateItemCommandHandler : BaseUpdateHandler<UpdateItemCommand, Ite
     protected override string GetAuditAction() => AuditActions.ItemUpdated;
 
     protected override string CaptureOldValues(Item entity)
-        => $"Name: {entity.Name}, SKU: {entity.SKU}, Price: {entity.BasePrice}, ColorId: {entity.ColorId}, ImageUrl: {entity.ImageUrl}";
+        => $"{{\"name\":\"{entity.Name}\",\"sku\":\"{entity.SKU}\",\"basePrice\":{entity.BasePrice},\"colorId\":\"{entity.ColorId}\",\"imageUrl\":\"{entity.ImageUrl}\"}}";
 
     protected override string CaptureNewValues(Item entity)
-        => $"Name: {entity.Name}, SKU: {entity.SKU}, Price: {entity.BasePrice}, ColorId: {entity.ColorId}, ImageUrl: {entity.ImageUrl}";
+        => $"{{\"name\":\"{entity.Name}\",\"sku\":\"{entity.SKU}\",\"basePrice\":{entity.BasePrice},\"colorId\":\"{entity.ColorId}\",\"imageUrl\":\"{entity.ImageUrl}\"}}";
 
     // Override uniqueness validation to check for duplicate SKU
     protected override async Task<Result<bool>> ValidateUniquenessAsync(

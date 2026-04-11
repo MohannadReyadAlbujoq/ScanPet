@@ -77,7 +77,7 @@ try
     builder.Services.AddHttpContextAccessor(); // Required for CurrentUserService
     builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
     builder.Services.AddScoped<ILoggerService, LoggerService>();
-    builder.Services.AddSingleton<MobileBackend.Application.Common.Interfaces.IFileService, MobileBackend.API.Services.FileService>();
+    builder.Services.AddSingleton<MobileBackend.Application.Common.Interfaces.IFileService, MobileBackend.API.Services.CloudinaryFileService>();
 
     // 5. JWT Authentication Configuration
     var jwtSettings = builder.Configuration.GetSection("JwtSettings");

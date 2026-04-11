@@ -48,10 +48,10 @@ public class UpdateRoleCommandHandler : BaseUpdateHandler<UpdateRoleCommand, Rol
     protected override string GetAuditAction() => AuditActions.RoleUpdated;
 
     protected override string CaptureOldValues(Role entity)
-        => $"Name: {entity.Name}";
+        => $"{{\"name\":\"{entity.Name}\"}}";
 
     protected override string CaptureNewValues(Role entity)
-        => $"Name: {entity.Name}";
+        => $"{{\"name\":\"{entity.Name}\"}}";
 
     // Override uniqueness validation
     protected override async Task<Result<bool>> ValidateUniquenessAsync(
