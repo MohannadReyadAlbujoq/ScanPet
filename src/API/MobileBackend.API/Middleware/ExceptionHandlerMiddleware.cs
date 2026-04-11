@@ -1,5 +1,7 @@
 using System.Net;
 using System.Text.Json;
+using FluentValidation;
+using Microsoft.EntityFrameworkCore;
 using MobileBackend.Application.DTOs.Common;
 
 namespace MobileBackend.API.Middleware;
@@ -40,7 +42,7 @@ public class ExceptionHandlerMiddleware
     private async Task HandleExceptionAsync(HttpContext context, Exception exception)
     {
         context.Response.ContentType = "application/json";
-        
+
         var response = new Result<object>
         {
             Success = false,
@@ -72,8 +74,10 @@ public class ExceptionHandlerMiddleware
         {
             UnauthorizedAccessException => "You are not authorized to perform this action.",
             KeyNotFoundException => "The requested resource was not found.",
+            ValidationException validationEx => string.Join("; ", validationEx.Errors.Select(e => e.ErrorMessage)),
             ArgumentException => exception.Message,
             InvalidOperationException => exception.Message,
+            DbUpdateException dbEx => GetDbUpdateMessage(dbEx),
             _ => "An error occurred while processing your request. Please try again later."
         };
     }
@@ -84,10 +88,38 @@ public class ExceptionHandlerMiddleware
         {
             UnauthorizedAccessException => (int)HttpStatusCode.Unauthorized,
             KeyNotFoundException => (int)HttpStatusCode.NotFound,
+            ValidationException => (int)HttpStatusCode.BadRequest,
             ArgumentException => (int)HttpStatusCode.BadRequest,
             InvalidOperationException => (int)HttpStatusCode.BadRequest,
+            DbUpdateException dbEx when IsUniqueConstraintViolation(dbEx) => (int)HttpStatusCode.Conflict,
+            DbUpdateException => (int)HttpStatusCode.BadRequest,
             _ => (int)HttpStatusCode.InternalServerError
         };
+    }
+
+    private static string GetDbUpdateMessage(DbUpdateException exception)
+    {
+        var innerMessage = exception.InnerException?.Message ?? exception.Message;
+
+        if (IsUniqueConstraintViolation(exception))
+        {
+            return "A record with the same unique value already exists. Please use a different value.";
+        }
+
+        if (innerMessage.Contains("foreign key", StringComparison.OrdinalIgnoreCase))
+        {
+            return "The operation failed because a referenced record does not exist or is still in use.";
+        }
+
+        return "A database error occurred while processing your request. Please verify your data and try again.";
+    }
+
+    private static bool IsUniqueConstraintViolation(DbUpdateException exception)
+    {
+        var innerMessage = exception.InnerException?.Message ?? exception.Message;
+        return innerMessage.Contains("unique", StringComparison.OrdinalIgnoreCase)
+            || innerMessage.Contains("duplicate", StringComparison.OrdinalIgnoreCase)
+            || innerMessage.Contains("23505", StringComparison.OrdinalIgnoreCase); // PostgreSQL unique violation code
     }
 }
 

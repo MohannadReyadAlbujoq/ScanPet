@@ -50,6 +50,11 @@ public class ItemsController : BaseApiController
         };
         var result = await Mediator.Send(query);
 
+        if (result.Success && result.Data?.Items != null)
+        {
+            ResolveImageUrls(result.Data.Items);
+        }
+
         return result.Success 
             ? OkResponse(result.Data) 
             : ErrorResponse(result);
@@ -68,6 +73,11 @@ public class ItemsController : BaseApiController
     {
         var query = new GetItemByIdQuery { ItemId = id };
         var result = await Mediator.Send(query);
+
+        if (result.Success && result.Data != null)
+        {
+            ResolveImageUrl(result.Data);
+        }
 
         return result.Success 
             ? OkResponse(result.Data) 
@@ -196,4 +206,34 @@ public class ItemsController : BaseApiController
             ? OkResponse("Item deleted successfully") 
             : ErrorResponse(result);
     }
+
+    #region Private Helpers
+
+    private string BuildBaseUrl()
+    {
+        var request = HttpContext.Request;
+        return $"{request.Scheme}://{request.Host}";
+    }
+
+    private void ResolveImageUrl(ItemDto dto)
+    {
+        if (!string.IsNullOrEmpty(dto.ImageUrl) && dto.ImageUrl.StartsWith('/'))
+        {
+            dto.ImageUrl = $"{BuildBaseUrl()}{dto.ImageUrl}";
+        }
+    }
+
+    private void ResolveImageUrls(IEnumerable<ItemDto> items)
+    {
+        var baseUrl = BuildBaseUrl();
+        foreach (var item in items)
+        {
+            if (!string.IsNullOrEmpty(item.ImageUrl) && item.ImageUrl.StartsWith('/'))
+            {
+                item.ImageUrl = $"{baseUrl}{item.ImageUrl}";
+            }
+        }
+    }
+
+    #endregion
 }

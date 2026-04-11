@@ -76,6 +76,7 @@ public abstract class BaseCreateHandler<TCommand, TEntity> : IRequestHandler<TCo
                 additionalInfo: GetAuditMessage(entity),
                 cancellationToken: cancellationToken
             );
+            await UnitOfWork.SaveChangesAsync(cancellationToken);
 
             Logger.LogInformation("{EntityName} created successfully: {EntityId}", 
                 GetEntityName(), entity.Id);
@@ -85,8 +86,35 @@ public abstract class BaseCreateHandler<TCommand, TEntity> : IRequestHandler<TCo
         catch (Exception ex)
         {
             Logger.LogError(ex, "Error creating {EntityName}", GetEntityName());
-            return Result<Guid>.FailureResult(ErrorMessages.CreateFailed(GetEntityName()), 500);
+            return ClassifyException(ex, GetEntityName(), "creating");
         }
+    }
+
+    /// <summary>
+    /// Classifies exceptions and returns appropriate Result with specific error messages
+    /// </summary>
+    private static Result<Guid> ClassifyException(Exception ex, string entityName, string operation)
+    {
+        var innerMessage = ex.InnerException?.Message ?? ex.Message;
+
+        // Unique constraint violation
+        if (innerMessage.Contains("unique", StringComparison.OrdinalIgnoreCase)
+            || innerMessage.Contains("duplicate", StringComparison.OrdinalIgnoreCase)
+            || innerMessage.Contains("23505", StringComparison.OrdinalIgnoreCase))
+        {
+            return Result<Guid>.FailureResult(
+                $"A {entityName.ToLower()} with the same unique value already exists.", 409);
+        }
+
+        // Foreign key violation
+        if (innerMessage.Contains("foreign key", StringComparison.OrdinalIgnoreCase)
+            || innerMessage.Contains("23503", StringComparison.OrdinalIgnoreCase))
+        {
+            return Result<Guid>.FailureResult(
+                $"A referenced record does not exist. Please verify all related data.", 400);
+        }
+
+        return Result<Guid>.FailureResult(ErrorMessages.CreateFailed(entityName), 500);
     }
 
     // Abstract methods - must be implemented by derived classes

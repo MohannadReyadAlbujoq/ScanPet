@@ -56,11 +56,24 @@ public class CreateColorCommandHandler : BaseCreateHandler<CreateColorCommand, C
         CreateColorCommand command,
         CancellationToken cancellationToken)
     {
+        // Check name uniqueness
         var existingColor = await UnitOfWork.Colors.GetByNameAsync(command.Name, cancellationToken);
         if (existingColor != null)
         {
             return Result<Guid>.FailureResult(ErrorMessages.AlreadyExists("Color", "name"), 409);
         }
+
+        // Check RGB uniqueness
+        var colors = await UnitOfWork.Colors.FindAsync(
+            c => c.RedValue == command.RedValue
+              && c.GreenValue == command.GreenValue
+              && c.BlueValue == command.BlueValue,
+            cancellationToken);
+        if (colors.Any())
+        {
+            return Result<Guid>.FailureResult(ErrorMessages.AlreadyExists("Color", "RGB values"), 409);
+        }
+
         return Result<Guid>.SuccessResult(Guid.Empty);
     }
 }

@@ -116,6 +116,12 @@ public class InventoriesController : BaseApiController
     {
         var query = new GetItemsInInventoryQuery { InventoryId = inventoryId };
         var result = await Mediator.Send(query);
+
+        if (result.Success && result.Data != null)
+        {
+            ResolveInventoryItemImageUrls(result.Data);
+        }
+
         return HandleResult(result);
     }
 
@@ -127,6 +133,12 @@ public class InventoriesController : BaseApiController
     {
         var query = new GetItemInventoryQuery { ItemId = itemId };
         var result = await Mediator.Send(query);
+
+        if (result.Success && result.Data != null)
+        {
+            ResolveInventoryItemImageUrls(result.Data);
+        }
+
         return HandleResult(result);
     }
 
@@ -261,6 +273,12 @@ public class InventoriesController : BaseApiController
     {
         var query = new GetLowStockItemsQuery();
         var result = await Mediator.Send(query);
+
+        if (result.Success && result.Data != null)
+        {
+            ResolveInventoryItemImageUrls(result.Data);
+        }
+
         return HandleResult(result);
     }
 
@@ -274,4 +292,20 @@ public class InventoriesController : BaseApiController
         var result = await Mediator.Send(query);
         return HandleResult(result);
     }
+
+    #region Private Helpers
+
+    private void ResolveInventoryItemImageUrls(IEnumerable<ItemInventoryDto> items)
+    {
+        var baseUrl = $"{HttpContext.Request.Scheme}://{HttpContext.Request.Host}";
+        foreach (var item in items)
+        {
+            if (!string.IsNullOrEmpty(item.ItemImageUrl) && item.ItemImageUrl.StartsWith('/'))
+            {
+                item.ItemImageUrl = $"{baseUrl}{item.ItemImageUrl}";
+            }
+        }
+    }
+
+    #endregion
 }

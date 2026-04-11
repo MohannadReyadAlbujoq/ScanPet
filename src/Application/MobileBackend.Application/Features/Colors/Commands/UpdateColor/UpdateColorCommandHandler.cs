@@ -62,11 +62,25 @@ public class UpdateColorCommandHandler : BaseUpdateHandler<UpdateColorCommand, C
         Color entity,
         CancellationToken cancellationToken)
     {
+        // Check name uniqueness
         var existingColor = await UnitOfWork.Colors.GetByNameAsync(command.Name, cancellationToken);
         if (existingColor != null && existingColor.Id != command.ColorId)
         {
             return Result<bool>.FailureResult(ErrorMessages.AlreadyExists("Color", "name"), 409);
         }
+
+        // Check RGB uniqueness
+        var colors = await UnitOfWork.Colors.FindAsync(
+            c => c.RedValue == command.RedValue
+              && c.GreenValue == command.GreenValue
+              && c.BlueValue == command.BlueValue
+              && c.Id != command.ColorId,
+            cancellationToken);
+        if (colors.Any())
+        {
+            return Result<bool>.FailureResult(ErrorMessages.AlreadyExists("Color", "RGB values"), 409);
+        }
+
         return Result<bool>.SuccessResult(true);
     }
 }

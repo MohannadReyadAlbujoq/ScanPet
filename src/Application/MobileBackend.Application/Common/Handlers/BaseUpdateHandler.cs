@@ -85,6 +85,7 @@ public abstract class BaseUpdateHandler<TCommand, TEntity> : IRequestHandler<TCo
 
             // 10. Audit log with old/new values
             await LogAuditAsync(entity, oldValues, newValues, cancellationToken);
+            await UnitOfWork.SaveChangesAsync(cancellationToken);
 
             Logger.LogInformation("{EntityName} updated successfully: {EntityId}", 
                 GetEntityName(), entityId);
@@ -95,8 +96,35 @@ public abstract class BaseUpdateHandler<TCommand, TEntity> : IRequestHandler<TCo
         {
             Logger.LogError(ex, "Error updating {EntityName}: {EntityId}", 
                 GetEntityName(), GetEntityId(request));
-            return Result<bool>.FailureResult(ErrorMessages.UpdateFailed(GetEntityName()), 500);
+            return ClassifyException(ex, GetEntityName(), "updating");
         }
+    }
+
+    /// <summary>
+    /// Classifies exceptions and returns appropriate Result with specific error messages
+    /// </summary>
+    private static Result<bool> ClassifyException(Exception ex, string entityName, string operation)
+    {
+        var innerMessage = ex.InnerException?.Message ?? ex.Message;
+
+        // Unique constraint violation
+        if (innerMessage.Contains("unique", StringComparison.OrdinalIgnoreCase)
+            || innerMessage.Contains("duplicate", StringComparison.OrdinalIgnoreCase)
+            || innerMessage.Contains("23505", StringComparison.OrdinalIgnoreCase))
+        {
+            return Result<bool>.FailureResult(
+                $"A {entityName.ToLower()} with the same unique value already exists.", 409);
+        }
+
+        // Foreign key violation
+        if (innerMessage.Contains("foreign key", StringComparison.OrdinalIgnoreCase)
+            || innerMessage.Contains("23503", StringComparison.OrdinalIgnoreCase))
+        {
+            return Result<bool>.FailureResult(
+                $"A referenced record does not exist. Please verify all related data.", 400);
+        }
+
+        return Result<bool>.FailureResult(ErrorMessages.UpdateFailed(entityName), 500);
     }
 
     // Abstract methods - must be implemented by derived classes

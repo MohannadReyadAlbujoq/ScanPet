@@ -48,10 +48,11 @@ public class RefundOrderItemCommandHandler : IRequestHandler<RefundOrderItemComm
                 return Result.FailureResult($"Order item with serial number {request.SerialNumber} not found", 404);
             }
 
-            // Check if order item is already refunded
+            // Check if order item is already fully refunded
             if (orderItem.Status == OrderItemStatus.Refunded)
             {
-                return Result.FailureResult("This order item has already been refunded", 400);
+                return Result.FailureResult(
+                    $"This order item has already been fully refunded ({orderItem.RefundedQuantity}/{orderItem.Quantity})", 400);
             }
 
             // Check if order item is deleted
@@ -60,11 +61,13 @@ public class RefundOrderItemCommandHandler : IRequestHandler<RefundOrderItemComm
                 return Result.FailureResult("This order item has been deleted", 400);
             }
 
-            // Validate refund quantity
-            if (request.RefundQuantity > orderItem.Quantity)
+            // Calculate remaining refundable quantity
+            var remainingQuantity = orderItem.Quantity - orderItem.RefundedQuantity;
+            if (request.RefundQuantity > remainingQuantity)
             {
                 return Result.FailureResult(
-                    $"Refund quantity ({request.RefundQuantity}) cannot exceed ordered quantity ({orderItem.Quantity})", 
+                    $"Refund quantity ({request.RefundQuantity}) exceeds remaining refundable quantity ({remainingQuantity}). " +
+                    $"Ordered: {orderItem.Quantity}, Already refunded: {orderItem.RefundedQuantity}",
                     400);
             }
 
@@ -92,7 +95,7 @@ public class RefundOrderItemCommandHandler : IRequestHandler<RefundOrderItemComm
                 return Result.FailureResult("Related item not found in inventory", 404);
             }
 
-            // NEW: Restore inventory to specific warehouse using ItemInventory
+            // Restore inventory to specific warehouse using ItemInventory
             var adjustSuccess = await _unitOfWork.ItemInventories.AdjustInventoryAsync(
                 itemId: orderItem.ItemId,
                 inventoryId: request.RefundToInventoryId,
@@ -107,15 +110,22 @@ public class RefundOrderItemCommandHandler : IRequestHandler<RefundOrderItemComm
                     500);
             }
 
-            // Update order item status to refunded
-            orderItem.Status = OrderItemStatus.Refunded;
-            orderItem.RefundedQuantity = request.RefundQuantity;
+            // Accumulate refunded quantity (supports multiple partial refunds)
+            var newRefundedTotal = orderItem.RefundedQuantity + request.RefundQuantity;
+            orderItem.RefundedQuantity = newRefundedTotal;
             orderItem.RefundedAt = DateTime.UtcNow;
             orderItem.RefundedBy = _currentUserService.UserId;
-            orderItem.RefundReason = request.RefundReason;
-            orderItem.RefundedToInventoryId = request.RefundToInventoryId; // Track where it went
+            orderItem.RefundReason = string.IsNullOrEmpty(orderItem.RefundReason)
+                ? request.RefundReason
+                : $"{orderItem.RefundReason}; {request.RefundReason}";
+            orderItem.RefundedToInventoryId = request.RefundToInventoryId;
             orderItem.UpdatedAt = DateTime.UtcNow;
             orderItem.UpdatedBy = _currentUserService.UserId;
+
+            // Set status based on whether all items have been refunded
+            orderItem.Status = newRefundedTotal >= orderItem.Quantity
+                ? OrderItemStatus.Refunded
+                : OrderItemStatus.PartiallyRefunded;
 
             // Update order item
             _unitOfWork.OrderItems.Update(orderItem);
@@ -127,7 +137,8 @@ public class RefundOrderItemCommandHandler : IRequestHandler<RefundOrderItemComm
                 entityId: orderItem.Id,
                 userId: _currentUserService.UserId ?? Guid.Empty,
                 additionalInfo: $"Refunded order item {request.SerialNumber}, " +
-                               $"Quantity: {request.RefundQuantity}, " +
+                               $"Quantity: {request.RefundQuantity} (Total refunded: {newRefundedTotal}/{orderItem.Quantity}), " +
+                               $"Status: {orderItem.Status}, " +
                                $"To Inventory: {inventory.Name} ({inventory.Id}), " +
                                $"Reason: {request.RefundReason ?? "Not specified"}",
                 cancellationToken: cancellationToken
@@ -149,15 +160,17 @@ public class RefundOrderItemCommandHandler : IRequestHandler<RefundOrderItemComm
 
             _logger.LogInformation(
                 "Order item {SerialNumber} refunded successfully. " +
-                "Quantity: {RefundQuantity}, Item: {ItemId}, " +
-                "Inventory: {InventoryName} ({InventoryId}), " +
-                "Restored: {RestoredQuantity}",
+                "Quantity: {RefundQuantity} (Total: {TotalRefunded}/{OrderedQuantity}), " +
+                "Status: {Status}, Item: {ItemId}, " +
+                "Inventory: {InventoryName} ({InventoryId})",
                 request.SerialNumber,
                 request.RefundQuantity,
+                newRefundedTotal,
+                orderItem.Quantity,
+                orderItem.Status,
                 item.Id,
                 inventory.Name,
-                inventory.Id,
-                request.RefundQuantity
+                inventory.Id
             );
 
             return Result.SuccessResult();

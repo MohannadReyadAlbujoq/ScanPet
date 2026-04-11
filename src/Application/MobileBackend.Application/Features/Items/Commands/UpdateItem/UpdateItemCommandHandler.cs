@@ -61,6 +61,24 @@ public class UpdateItemCommandHandler : BaseUpdateHandler<UpdateItemCommand, Ite
     protected override string CaptureNewValues(Item entity)
         => $"Name: {entity.Name}, SKU: {entity.SKU}, Price: {entity.BasePrice}, ColorId: {entity.ColorId}, ImageUrl: {entity.ImageUrl}";
 
+    // Override uniqueness validation to check for duplicate SKU
+    protected override async Task<Result<bool>> ValidateUniquenessAsync(
+        UpdateItemCommand command,
+        Item entity,
+        CancellationToken cancellationToken)
+    {
+        if (!string.IsNullOrWhiteSpace(command.SKU))
+        {
+            var existingItem = await UnitOfWork.Items.GetBySkuAsync(command.SKU, cancellationToken);
+            if (existingItem != null && existingItem.Id != command.ItemId)
+            {
+                return Result<bool>.FailureResult(
+                    ErrorMessages.AlreadyExists("Item", "SKU"), 409);
+            }
+        }
+        return Result<bool>.SuccessResult(true);
+    }
+
     // Override validation to check color existence
     protected override async Task<Result<bool>> ValidateAsync(
         UpdateItemCommand command,

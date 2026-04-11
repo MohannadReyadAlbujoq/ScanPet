@@ -75,6 +75,7 @@ public abstract class BaseSoftDeleteHandler<TCommand, TEntity> : IRequestHandler
                 additionalInfo: GetAuditMessage(entity),
                 cancellationToken: cancellationToken
             );
+            await UnitOfWork.SaveChangesAsync(cancellationToken);
 
             Logger.LogInformation("{EntityName} deleted successfully: {EntityId}", 
                 GetEntityName(), entityId);
@@ -85,6 +86,17 @@ public abstract class BaseSoftDeleteHandler<TCommand, TEntity> : IRequestHandler
         {
             Logger.LogError(ex, "Error deleting {EntityName}: {EntityId}", 
                 GetEntityName(), GetEntityId(request));
+
+            var innerMessage = ex.InnerException?.Message ?? ex.Message;
+
+            // Foreign key violation - entity is still referenced
+            if (innerMessage.Contains("foreign key", StringComparison.OrdinalIgnoreCase)
+                || innerMessage.Contains("23503", StringComparison.OrdinalIgnoreCase))
+            {
+                return Result<bool>.FailureResult(
+                    ErrorMessages.CannotDelete(GetEntityName(), "It is still referenced by other records."), 400);
+            }
+
             return Result<bool>.FailureResult(ErrorMessages.DeleteFailed(GetEntityName()), 500);
         }
     }

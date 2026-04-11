@@ -51,6 +51,23 @@ public class CreateItemCommandHandler : BaseCreateHandler<CreateItemCommand, Ite
     protected override string GetAuditMessage(Item entity)
         => $"Created item: {entity.Name} (SKU: {entity.SKU}, Price: {entity.BasePrice})";
 
+    // Override uniqueness validation to check for duplicate SKU
+    protected override async Task<Result<Guid>> ValidateUniquenessAsync(
+        CreateItemCommand command,
+        CancellationToken cancellationToken)
+    {
+        if (!string.IsNullOrWhiteSpace(command.SKU))
+        {
+            var existingItem = await UnitOfWork.Items.GetBySkuAsync(command.SKU, cancellationToken);
+            if (existingItem != null)
+            {
+                return Result<Guid>.FailureResult(
+                    ErrorMessages.AlreadyExists("Item", "SKU"), 409);
+            }
+        }
+        return Result<Guid>.SuccessResult(Guid.Empty);
+    }
+
     // Override validation to check color existence
     protected override async Task<Result<Guid>> ValidateAsync(
         CreateItemCommand command,
