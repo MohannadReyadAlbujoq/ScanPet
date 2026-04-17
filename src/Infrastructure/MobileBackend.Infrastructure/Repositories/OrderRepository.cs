@@ -17,7 +17,7 @@ public class OrderRepository : GenericRepository<Order>, IOrderRepository
         return await _dbSet
             .Include(o => o.OrderItems)
                 .ThenInclude(oi => oi.Item)
-            .Include(o => o.Location)  // Include location too
+            .Include(o => o.Inventory)  // Include location too
             .FirstOrDefaultAsync(o => o.Id == orderId, cancellationToken);
     }
 
@@ -102,8 +102,11 @@ public class OrderRepository : GenericRepository<Order>, IOrderRepository
 
     public async Task<IEnumerable<Order>> GetOrdersByLocationAsync(Guid locationId, CancellationToken cancellationToken = default)
     {
+        // Keep name for interface but query by Inventory.LocationId if needed. For now just map error or change interface? 
+        // Order no longer directly has LocationId, assuming we query orders of inventories in that location
         return await _dbSet
-            .Where(o => o.LocationId == locationId)
+            .Include(o => o.Inventory)
+            .Where(o => o.Inventory != null && o.Inventory.LocationId == locationId)
             .OrderByDescending(o => o.CreatedAt)
             .ToListAsync(cancellationToken);
     }
@@ -128,7 +131,7 @@ public class OrderRepository : GenericRepository<Order>, IOrderRepository
     {
         return await _dbSet
             .AsNoTracking()
-            .Include(o => o.Location)  // ? Eager load locations
+            .Include(o => o.Inventory)  // ? Eager load inventory instead
             .Where(o => !o.IsDeleted)
             .OrderByDescending(o => o.CreatedAt)
             .ToListAsync(cancellationToken);

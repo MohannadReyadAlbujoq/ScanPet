@@ -16,6 +16,7 @@ using MobileBackend.Application.Features.Inventories.Commands.UpdateItemQuantity
 using MobileBackend.Application.Features.Inventories.Queries.GetActiveInventories;
 using MobileBackend.Application.Features.Inventories.Queries.GetAllInventories;
 using MobileBackend.Application.Features.Inventories.Queries.GetInventoryById;
+using MobileBackend.Application.Features.Inventories.Queries.GetInventoryItemCounts;
 using MobileBackend.Application.Features.Inventories.Queries.GetItemInventory;
 using MobileBackend.Application.Features.Inventories.Queries.GetItemsInInventory;
 using MobileBackend.Application.Features.Inventories.Queries.GetLowStockItems;
@@ -289,6 +290,30 @@ public class InventoriesController : BaseApiController
     public async Task<IActionResult> GetActiveInventories()
     {
         var query = new GetActiveInventoriesQuery();
+        var result = await Mediator.Send(query);
+        return HandleResult(result);
+    }
+
+    /// <summary>
+    /// Get item quantity counts for all inventories.
+    /// Returns each inventory with its total item types, total quantity, and per-item breakdown.
+    /// </summary>
+    [HttpGet("item-counts")]
+    public async Task<IActionResult> GetAllInventoryItemCounts()
+    {
+        var query = new GetInventoryItemCountsQuery();
+        var result = await Mediator.Send(query);
+        return HandleResult(result);
+    }
+
+    /// <summary>
+    /// Get item quantity counts for a specific inventory.
+    /// Returns total item types, total quantity, and per-item breakdown for one inventory.
+    /// </summary>
+    [HttpGet("{inventoryId}/item-counts")]
+    public async Task<IActionResult> GetInventoryItemCounts(Guid inventoryId)
+    {
+        var query = new GetInventoryItemCountsQuery { InventoryId = inventoryId };
         var result = await Mediator.Send(query);
         return HandleResult(result);
     }

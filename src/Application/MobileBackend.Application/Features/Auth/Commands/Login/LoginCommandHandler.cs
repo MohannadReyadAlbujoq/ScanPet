@@ -117,14 +117,11 @@ public class LoginCommandHandler : IRequestHandler<LoginCommand, Result<LoginRes
             // 9. Log successful login in audit log
             await LogSuccessfulLogin(user.Id, user.Username, request.IpAddress);
 
-            // 10. Build response
-            // Resolve default inventory name if set
-            string? defaultInventoryName = null;
-            if (user.DefaultInventoryId.HasValue)
-            {
-                var inv = await _unitOfWork.Inventories.GetByIdAsync(user.DefaultInventoryId.Value, cancellationToken);
-                defaultInventoryName = inv?.Name;
-            }
+            // 10. Build response — default inventories are already loaded via GetByUsernameOrEmailAsync
+            var defaultInventoryIds = user.DefaultInventories.Select(di => di.InventoryId).ToList();
+            var defaultInventoryNames = user.DefaultInventories.Select(di => di.Inventory?.Name ?? string.Empty).ToList();
+            var defaultLocationIds = user.DefaultLocations.Select(dl => dl.LocationId).ToList();
+            var defaultLocationNames = user.DefaultLocations.Select(dl => dl.Location?.Name ?? string.Empty).ToList();
 
             var response = new LoginResponseDto
             {
@@ -139,8 +136,10 @@ public class LoginCommandHandler : IRequestHandler<LoginCommand, Result<LoginRes
                     FullName = user.FullName,
                     IsEnabled = user.IsEnabled,
                     IsApproved = user.IsApproved,
-                    DefaultInventoryId = user.DefaultInventoryId,
-                    DefaultInventoryName = defaultInventoryName,
+                    DefaultInventoryIds = defaultInventoryIds,
+                    DefaultInventoryNames = defaultInventoryNames,
+                    DefaultLocationIds = defaultLocationIds,
+                    DefaultLocationNames = defaultLocationNames,
                     Roles = roles.ToList(),
                     PermissionsBitmask = permissionsBitmask
                 }

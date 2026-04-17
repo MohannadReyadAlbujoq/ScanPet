@@ -92,7 +92,8 @@ public class LocationRepository : GenericRepository<Location>, ILocationReposito
             return (null, 0, new List<Inventory>());
 
         var orderCount = await _context.Set<Order>()
-            .CountAsync(o => o.LocationId == id && !o.IsDeleted, cancellationToken);
+            .Include(o => o.Inventory)
+            .CountAsync(o => o.Inventory != null && o.Inventory.LocationId == id && !o.IsDeleted, cancellationToken);
 
         return (location, orderCount, location.Inventories.ToList());
     }

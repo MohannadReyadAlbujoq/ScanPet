@@ -39,8 +39,10 @@ public class GetUserByIdQueryHandler : BaseGetByIdHandler<GetUserByIdQuery, User
             PhoneNumber = entity.PhoneNumber,
             IsEnabled = entity.IsEnabled,
             IsApproved = entity.IsApproved,
-            DefaultInventoryId = entity.DefaultInventoryId,
-            DefaultInventoryName = entity.DefaultInventory?.Name,
+            DefaultInventoryIds = entity.DefaultInventories.Select(di => di.InventoryId).ToList(),
+            DefaultInventoryNames = entity.DefaultInventories.Select(di => di.Inventory?.Name ?? string.Empty).ToList(),
+            DefaultLocationIds = entity.DefaultLocations.Select(dl => dl.LocationId).ToList(),
+            DefaultLocationNames = entity.DefaultLocations.Select(dl => dl.Location?.Name ?? string.Empty).ToList(),
             Roles = entity.UserRoles.Select(ur => ur.Role.Name).ToList(),
             CreatedAt = entity.CreatedAt,
             UpdatedAt = entity.UpdatedAt

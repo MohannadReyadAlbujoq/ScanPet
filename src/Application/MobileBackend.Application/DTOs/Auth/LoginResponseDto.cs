@@ -37,8 +37,10 @@ public class UserInfoDto
     public string FullName { get; set; } = string.Empty;
     public bool IsEnabled { get; set; }
     public bool IsApproved { get; set; }
-    public Guid? DefaultInventoryId { get; set; }
-    public string? DefaultInventoryName { get; set; }
+    public List<Guid>? DefaultInventoryIds { get; set; }
+    public List<string>? DefaultInventoryNames { get; set; }
+    public List<Guid>? DefaultLocationIds { get; set; }
+    public List<string>? DefaultLocationNames { get; set; }
     public List<string> Roles { get; set; } = new();
     public long PermissionsBitmask { get; set; }
 }

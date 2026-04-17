@@ -25,6 +25,8 @@ public class ApplicationDbContext : DbContext
     public DbSet<OrderItem> OrderItems => Set<OrderItem>();
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
     public DbSet<ItemInventory> ItemInventories => Set<ItemInventory>();
+    public DbSet<UserDefaultInventory> UserDefaultInventories => Set<UserDefaultInventory>();
+    public DbSet<UserDefaultLocation> UserDefaultLocations => Set<UserDefaultLocation>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

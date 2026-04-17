@@ -36,8 +36,10 @@ public class GetAllUsersQueryHandler : IRequestHandler<GetAllUsersQuery, Result<
             PhoneNumber = user.PhoneNumber,
             IsEnabled = user.IsEnabled,
             IsApproved = user.IsApproved,
-            DefaultInventoryId = user.DefaultInventoryId,
-            DefaultInventoryName = user.DefaultInventory?.Name,
+            DefaultInventoryIds = user.DefaultInventories.Select(di => di.InventoryId).ToList(),
+            DefaultInventoryNames = user.DefaultInventories.Select(di => di.Inventory?.Name ?? string.Empty).ToList(),
+            DefaultLocationIds = user.DefaultLocations.Select(dl => dl.LocationId).ToList(),
+            DefaultLocationNames = user.DefaultLocations.Select(dl => dl.Location?.Name ?? string.Empty).ToList(),
             Roles = user.UserRoles.Select(ur => ur.Role.Name).ToList(),
             CreatedAt = user.CreatedAt,
             UpdatedAt = user.UpdatedAt

@@ -84,7 +84,7 @@ public class OrdersController : BaseApiController
         {
             ClientName = dto.ClientName ?? string.Empty,
             ClientPhone = dto.ClientPhone ?? string.Empty,
-            LocationId = dto.LocationId ?? Guid.Empty,
+            InventoryId = dto.InventoryId ?? Guid.Empty,
             Description = dto.Description,
             OrderItems = dto.OrderItems ?? new List<OrderItemDto>()
         };

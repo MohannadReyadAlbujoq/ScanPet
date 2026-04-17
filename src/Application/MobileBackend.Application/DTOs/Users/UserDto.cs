@@ -47,14 +47,24 @@ public class UserDto
     public bool? IsApproved { get; set; }
 
     /// <summary>
-    /// Default inventory/warehouse ID assigned to this user
+    /// Default inventory IDs assigned to this user
     /// </summary>
-    public Guid? DefaultInventoryId { get; set; }
+    public List<Guid>? DefaultInventoryIds { get; set; }
 
     /// <summary>
-    /// Default inventory/warehouse name (only in responses)
+    /// Default inventory names (only in responses)
     /// </summary>
-    public string? DefaultInventoryName { get; set; }
+    public List<string>? DefaultInventoryNames { get; set; }
+
+    /// <summary>
+    /// Default location IDs assigned to this user
+    /// </summary>
+    public List<Guid>? DefaultLocationIds { get; set; }
+
+    /// <summary>
+    /// Default location names (only in responses)
+    /// </summary>
+    public List<string>? DefaultLocationNames { get; set; }
 
     /// <summary>
     /// User roles (only in responses)

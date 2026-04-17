@@ -1,12 +1,12 @@
 namespace MobileBackend.Application.DTOs.Users;
 
 /// <summary>
-/// DTO for setting user's default inventory
+/// DTO for setting user's default inventories
 /// </summary>
 public class SetDefaultInventoryDto
 {
     /// <summary>
-    /// Inventory ID to set as default (null to clear)
+    /// Inventory IDs to set as default (empty list to clear all)
     /// </summary>
-    public Guid? DefaultInventoryId { get; set; }
+    public List<Guid> DefaultInventoryIds { get; set; } = new();
 }

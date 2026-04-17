@@ -134,14 +134,12 @@ public class RefreshTokenCommandHandler : IRequestHandler<RefreshTokenCommand, R
             await _unitOfWork.AuditLogs.AddAsync(auditLog, cancellationToken);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-            // 13. Build response
-            // Resolve default inventory name if set
-            string? defaultInventoryName = null;
-            if (user.DefaultInventoryId.HasValue)
-            {
-                var inv = await _unitOfWork.Inventories.GetByIdAsync(user.DefaultInventoryId.Value, cancellationToken);
-                defaultInventoryName = inv?.Name;
-            }
+            // 13. Build response — DefaultInventories loaded via GetByIdWithRolesAsync
+            var user2 = await _unitOfWork.Users.GetByIdWithRolesAsync(user.Id, cancellationToken);
+            var defaultInventoryIds = user2?.DefaultInventories.Select(di => di.InventoryId).ToList() ?? new List<Guid>();
+            var defaultInventoryNames = user2?.DefaultInventories.Select(di => di.Inventory?.Name ?? string.Empty).ToList() ?? new List<string>();
+            var defaultLocationIds = user2?.DefaultLocations.Select(dl => dl.LocationId).ToList() ?? new List<Guid>();
+            var defaultLocationNames = user2?.DefaultLocations.Select(dl => dl.Location?.Name ?? string.Empty).ToList() ?? new List<string>();
 
             var response = new LoginResponseDto
             {
@@ -156,8 +154,10 @@ public class RefreshTokenCommandHandler : IRequestHandler<RefreshTokenCommand, R
                     FullName = user.FullName,
                     IsEnabled = user.IsEnabled,
                     IsApproved = user.IsApproved,
-                    DefaultInventoryId = user.DefaultInventoryId,
-                    DefaultInventoryName = defaultInventoryName,
+                    DefaultInventoryIds = defaultInventoryIds,
+                    DefaultInventoryNames = defaultInventoryNames,
+                    DefaultLocationIds = defaultLocationIds,
+                    DefaultLocationNames = defaultLocationNames,
                     Roles = roles.ToList(),
                     PermissionsBitmask = permissionsBitmask
                 }

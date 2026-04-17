@@ -1,10 +1,9 @@
-using FluentAssertions;
+﻿using FluentAssertions;
 using MobileBackend.Application.Common.Interfaces;
 using MobileBackend.Application.DTOs.Orders;
 using MobileBackend.Application.Features.Orders.Commands.CreateOrder;
 using MobileBackend.Application.Interfaces;
 using MobileBackend.Domain.Entities;
-using MobileBackend.Domain.Enums;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
@@ -17,7 +16,7 @@ public class CreateOrderCommandHandlerTests : TestBase
     private readonly Mock<IUnitOfWork> _mockUnitOfWork;
     private readonly Mock<IOrderRepository> _mockOrderRepository;
     private readonly Mock<IItemRepository> _mockItemRepository;
-    private readonly Mock<ILocationRepository> _mockLocationRepository;
+    private readonly Mock<IInventoryRepository> _mockInventoryRepository;
     private readonly Mock<IItemInventoryRepository> _mockItemInventoryRepository;
     private readonly Mock<IOrderItemRepository> _mockOrderItemRepository;
     private readonly Mock<IAuditService> _mockAuditService;
@@ -30,21 +29,21 @@ public class CreateOrderCommandHandlerTests : TestBase
         _mockUnitOfWork = CreateMock<IUnitOfWork>();
         _mockOrderRepository = CreateMock<IOrderRepository>();
         _mockItemRepository = CreateMock<IItemRepository>();
-        _mockLocationRepository = CreateMock<ILocationRepository>();
+        _mockInventoryRepository = CreateMock<IInventoryRepository>();
         _mockItemInventoryRepository = CreateMock<IItemInventoryRepository>();
         _mockOrderItemRepository = CreateMock<IOrderItemRepository>();
         _mockAuditService = CreateMock<IAuditService>();
         _mockCurrentUserService = CreateMock<ICurrentUserService>();
         _mockLogger = CreateMock<ILogger<CreateOrderCommandHandler>>();
-        
+
         _mockUnitOfWork.Setup(x => x.Orders).Returns(_mockOrderRepository.Object);
         _mockUnitOfWork.Setup(x => x.Items).Returns(_mockItemRepository.Object);
-        _mockUnitOfWork.Setup(x => x.Locations).Returns(_mockLocationRepository.Object);
+        _mockUnitOfWork.Setup(x => x.Inventories).Returns(_mockInventoryRepository.Object);
         _mockUnitOfWork.Setup(x => x.ItemInventories).Returns(_mockItemInventoryRepository.Object);
         _mockUnitOfWork.Setup(x => x.OrderItems).Returns(_mockOrderItemRepository.Object);
-        
+
         _mockCurrentUserService.Setup(x => x.UserId).Returns(Guid.NewGuid());
-        
+
         _handler = new CreateOrderCommandHandler(
             _mockUnitOfWork.Object,
             _mockAuditService.Object,
@@ -52,91 +51,50 @@ public class CreateOrderCommandHandlerTests : TestBase
             _mockLogger.Object);
     }
 
-    private void SetupItemWithInventory(Guid itemId, string name, string sku, decimal basePrice, int inventoryQuantity)
+    private void SetupItemWithInventory(Guid itemId, string name, string sku, decimal basePrice, int availableQty)
     {
-        var item = new Item
+        var item = new Item { Id = itemId, Name = name, SKU = sku, BasePrice = basePrice };
+        var invId = Guid.NewGuid();
+        var ii = new ItemInventory
         {
-            Id = itemId,
-            Name = name,
-            SKU = sku,
-            BasePrice = basePrice
+            Id = Guid.NewGuid(), ItemId = itemId, InventoryId = invId, Quantity = availableQty,
+            Inventory = new Inventory { Id = invId, Name = "Test Warehouse", IsActive = true }
         };
-
-        var inventoryId = Guid.NewGuid();
-        var itemInventory = new ItemInventory
-        {
-            Id = Guid.NewGuid(),
-            ItemId = itemId,
-            InventoryId = inventoryId,
-            Quantity = inventoryQuantity,
-            Inventory = new Inventory { Id = inventoryId, Name = "Test Warehouse", IsActive = true }
-        };
-
         _mockItemRepository
             .Setup(x => x.FindAsync(It.IsAny<Expression<Func<Item, bool>>>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<Item> { item });
-
         _mockItemInventoryRepository
             .Setup(x => x.GetTotalQuantityForItemAsync(itemId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(inventoryQuantity);
-
+            .ReturnsAsync(availableQty);
         _mockItemInventoryRepository
             .Setup(x => x.GetByItemIdAsync(itemId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<ItemInventory> { itemInventory });
+            .ReturnsAsync(new List<ItemInventory> { ii });
     }
 
     [Fact]
     public async Task Handle_ValidCommand_ShouldCreateOrder()
     {
-        // Arrange
         var itemId = Guid.NewGuid();
-        var locationId = Guid.NewGuid();
-        
+        var inventoryId = Guid.NewGuid();
         var command = new CreateOrderCommand
         {
-            ClientName = "John Doe",
-            ClientPhone = "1234567890",
-            LocationId = locationId,
+            ClientName = "John Doe", ClientPhone = "1234567890", InventoryId = inventoryId,
             Description = "Test order",
-            OrderItems = new List<OrderItemDto>
-            {
-                new OrderItemDto
-                {
-                    ItemId = itemId,
-                    Quantity = 5,
-                    UnitPrice = 10.00m
-                }
-            }
+            OrderItems = new List<OrderItemDto> { new() { ItemId = itemId, Quantity = 5, UnitPrice = 10.00m } }
         };
-
-        var location = new Location { Id = locationId, Name = "Test Location" };
-
-        _mockLocationRepository
-            .Setup(x => x.GetByIdAsync(locationId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(location);
-
+        _mockInventoryRepository.Setup(x => x.GetByIdAsync(inventoryId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Inventory { Id = inventoryId, Name = "Test Inventory", IsActive = true });
         SetupItemWithInventory(itemId, "Test Item", "TEST-001", 10.00m, 10);
-
-        _mockOrderItemRepository
-            .Setup(x => x.GetBySerialNumberAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+        _mockOrderItemRepository.Setup(x => x.GetBySerialNumberAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((OrderItem?)null);
+        _mockOrderRepository.Setup(x => x.AddAsync(It.IsAny<Order>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((Order o, CancellationToken _) => o);
+        _mockUnitOfWork.Setup(x => x.SaveChangesAsync(It.IsAny<CancellationToken>())).ReturnsAsync(1);
 
-        _mockOrderRepository
-            .Setup(x => x.AddAsync(It.IsAny<Order>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((Order o, CancellationToken ct) => o);
-
-        _mockUnitOfWork
-            .Setup(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(1);
-
-        // Act
         var result = await _handler.Handle(command, CancellationToken.None);
 
-        // Assert
-        result.Should().NotBeNull();
         result.Success.Should().BeTrue();
         result.Data.Should().NotBeEmpty();
-
         _mockOrderRepository.Verify(x => x.AddAsync(It.IsAny<Order>(), It.IsAny<CancellationToken>()), Times.Once);
         _mockUnitOfWork.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
@@ -144,170 +102,87 @@ public class CreateOrderCommandHandlerTests : TestBase
     [Fact]
     public async Task Handle_InsufficientStock_ShouldReturnFailure()
     {
-        // Arrange
         var itemId = Guid.NewGuid();
-        var locationId = Guid.NewGuid();
-        
+        var inventoryId = Guid.NewGuid();
         var command = new CreateOrderCommand
         {
-            ClientName = "John Doe",
-            ClientPhone = "1234567890",
-            LocationId = locationId,
-            OrderItems = new List<OrderItemDto>
-            {
-                new OrderItemDto
-                {
-                    ItemId = itemId,
-                    Quantity = 20, // More than available
-                    UnitPrice = 10.00m
-                }
-            }
+            ClientName = "John Doe", ClientPhone = "1234567890", InventoryId = inventoryId,
+            OrderItems = new List<OrderItemDto> { new() { ItemId = itemId, Quantity = 20, UnitPrice = 10.00m } }
         };
+        _mockInventoryRepository.Setup(x => x.GetByIdAsync(inventoryId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Inventory { Id = inventoryId, Name = "Test Inventory", IsActive = true });
+        SetupItemWithInventory(itemId, "Test Item", "TEST-001", 10.00m, 10);
 
-        var location = new Location { Id = locationId, Name = "Test Location" };
-
-        _mockLocationRepository
-            .Setup(x => x.GetByIdAsync(locationId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(location);
-
-        SetupItemWithInventory(itemId, "Test Item", "TEST-001", 10.00m, 10); // Only 10 available
-
-        // Act
         var result = await _handler.Handle(command, CancellationToken.None);
 
-        // Assert
         result.Success.Should().BeFalse();
         result.ErrorMessage.Should().Contain("Insufficient quantity");
-        
         _mockOrderRepository.Verify(x => x.AddAsync(It.IsAny<Order>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
     public async Task Handle_ItemNotFound_ShouldReturnFailure()
     {
-        // Arrange
         var itemId = Guid.NewGuid();
-        var locationId = Guid.NewGuid();
-        
+        var inventoryId = Guid.NewGuid();
         var command = new CreateOrderCommand
         {
-            ClientName = "John Doe",
-            ClientPhone = "1234567890",
-            LocationId = locationId,
-            OrderItems = new List<OrderItemDto>
-            {
-                new OrderItemDto
-                {
-                    ItemId = itemId,
-                    Quantity = 5,
-                    UnitPrice = 10.00m
-                }
-            }
+            ClientName = "John Doe", ClientPhone = "1234567890", InventoryId = inventoryId,
+            OrderItems = new List<OrderItemDto> { new() { ItemId = itemId, Quantity = 5, UnitPrice = 10.00m } }
         };
-
-        var location = new Location { Id = locationId, Name = "Test Location" };
-
-        _mockLocationRepository
-            .Setup(x => x.GetByIdAsync(locationId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(location);
-
-        _mockItemRepository
-            .Setup(x => x.FindAsync(It.IsAny<Expression<Func<Item, bool>>>(), It.IsAny<CancellationToken>()))
+        _mockInventoryRepository.Setup(x => x.GetByIdAsync(inventoryId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Inventory { Id = inventoryId, Name = "Test Inventory", IsActive = true });
+        _mockItemRepository.Setup(x => x.FindAsync(It.IsAny<Expression<Func<Item, bool>>>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<Item>());
 
-        // Act
         var result = await _handler.Handle(command, CancellationToken.None);
 
-        // Assert
         result.Success.Should().BeFalse();
         result.ErrorMessage.Should().Contain("not found");
-        
         _mockOrderRepository.Verify(x => x.AddAsync(It.IsAny<Order>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
-    public async Task Handle_LocationNotFound_ShouldReturnFailure()
+    public async Task Handle_InventoryNotFound_ShouldReturnFailure()
     {
-        // Arrange
-        var locationId = Guid.NewGuid();
-        
+        var inventoryId = Guid.NewGuid();
         var command = new CreateOrderCommand
         {
-            ClientName = "John Doe",
-            ClientPhone = "1234567890",
-            LocationId = locationId,
-            OrderItems = new List<OrderItemDto>
-            {
-                new OrderItemDto
-                {
-                    ItemId = Guid.NewGuid(),
-                    Quantity = 5,
-                    UnitPrice = 10.00m
-                }
-            }
+            ClientName = "John Doe", ClientPhone = "1234567890", InventoryId = inventoryId,
+            OrderItems = new List<OrderItemDto> { new() { ItemId = Guid.NewGuid(), Quantity = 5, UnitPrice = 10.00m } }
         };
+        _mockInventoryRepository.Setup(x => x.GetByIdAsync(inventoryId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((Inventory?)null);
 
-        _mockLocationRepository
-            .Setup(x => x.GetByIdAsync(locationId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync((Location?)null);
-
-        // Act
         var result = await _handler.Handle(command, CancellationToken.None);
 
-        // Assert
         result.Success.Should().BeFalse();
-        result.ErrorMessage.Should().Contain("Location not found");
-        
+        result.ErrorMessage.Should().Contain("Inventory not found");
         _mockOrderRepository.Verify(x => x.AddAsync(It.IsAny<Order>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
     public async Task Handle_DatabaseError_ShouldReturnFailure()
     {
-        // Arrange
         var itemId = Guid.NewGuid();
-        var locationId = Guid.NewGuid();
-        
+        var inventoryId = Guid.NewGuid();
         var command = new CreateOrderCommand
         {
-            ClientName = "John Doe",
-            ClientPhone = "1234567890",
-            LocationId = locationId,
-            OrderItems = new List<OrderItemDto>
-            {
-                new OrderItemDto
-                {
-                    ItemId = itemId,
-                    Quantity = 5,
-                    UnitPrice = 10.00m
-                }
-            }
+            ClientName = "John Doe", ClientPhone = "1234567890", InventoryId = inventoryId,
+            OrderItems = new List<OrderItemDto> { new() { ItemId = itemId, Quantity = 5, UnitPrice = 10.00m } }
         };
-
-        var location = new Location { Id = locationId, Name = "Test Location" };
-
-        _mockLocationRepository
-            .Setup(x => x.GetByIdAsync(locationId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(location);
-
+        _mockInventoryRepository.Setup(x => x.GetByIdAsync(inventoryId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Inventory { Id = inventoryId, Name = "Test Inventory", IsActive = true });
         SetupItemWithInventory(itemId, "Test Item", "TEST-001", 10.00m, 10);
-
-        _mockOrderItemRepository
-            .Setup(x => x.GetBySerialNumberAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+        _mockOrderItemRepository.Setup(x => x.GetBySerialNumberAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((OrderItem?)null);
-
-        _mockOrderRepository
-            .Setup(x => x.AddAsync(It.IsAny<Order>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((Order o, CancellationToken ct) => o);
-
-        _mockUnitOfWork
-            .Setup(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()))
+        _mockOrderRepository.Setup(x => x.AddAsync(It.IsAny<Order>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((Order o, CancellationToken _) => o);
+        _mockUnitOfWork.Setup(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()))
             .ThrowsAsync(new Exception("Database error"));
 
-        // Act
         var result = await _handler.Handle(command, CancellationToken.None);
 
-        // Assert
         result.Success.Should().BeFalse();
         result.ErrorMessage.Should().Contain("creating the order");
     }

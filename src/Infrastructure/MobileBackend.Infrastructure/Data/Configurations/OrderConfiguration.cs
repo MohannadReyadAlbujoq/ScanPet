@@ -35,7 +35,7 @@ public class OrderConfiguration : IEntityTypeConfiguration<Order>
         builder.HasIndex(o => o.ClientPhone)
             .HasFilter("\"IsDeleted\" = false");
 
-        builder.Property(o => o.LocationId)
+        builder.Property(o => o.InventoryId)
             .IsRequired();
 
         builder.Property(o => o.Description)
@@ -68,11 +68,12 @@ public class OrderConfiguration : IEntityTypeConfiguration<Order>
             .IsRequired()
             .HasDefaultValue(false);
 
-        // Relationship with Location
-        builder.HasOne(o => o.Location)
-            .WithMany(l => l.Orders)
-            .HasForeignKey(o => o.LocationId)
+        // Relationship with Inventory
+        builder.HasOne(o => o.Inventory)
+            .WithMany(i => i.Orders)
+            .HasForeignKey(o => o.InventoryId)
             .OnDelete(DeleteBehavior.Restrict);
+
 
         builder.HasOne<User>()
             .WithMany()

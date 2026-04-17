@@ -13,9 +13,14 @@ public class User : BaseEntity, ISoftDelete
     public bool IsApproved { get; set; } = false;
 
     /// <summary>
-    /// Default inventory/warehouse assigned to this user
+    /// Default inventories assigned to this user
     /// </summary>
-    public Guid? DefaultInventoryId { get; set; }
+    public virtual ICollection<UserDefaultInventory> DefaultInventories { get; set; } = new List<UserDefaultInventory>();
+
+    /// <summary>
+    /// Default locations assigned to this user
+    /// </summary>
+    public virtual ICollection<UserDefaultLocation> DefaultLocations { get; set; } = new List<UserDefaultLocation>();
 
     // Soft Delete
     public bool IsDeleted { get; set; } = false;
@@ -23,7 +28,6 @@ public class User : BaseEntity, ISoftDelete
     public Guid? DeletedBy { get; set; }
 
     // Navigation Properties
-    public virtual Inventory? DefaultInventory { get; set; }
     public virtual ICollection<UserRole> UserRoles { get; set; } = new List<UserRole>();
     public virtual ICollection<RefreshToken> RefreshTokens { get; set; } = new List<RefreshToken>();
 }

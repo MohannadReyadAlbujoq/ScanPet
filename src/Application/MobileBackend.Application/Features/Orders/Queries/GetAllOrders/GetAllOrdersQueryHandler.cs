@@ -49,8 +49,8 @@ public class GetAllOrdersQueryHandler : BaseGetAllHandler<GetAllOrdersQuery, Ord
             OrderNumber = entity.OrderNumber,
             ClientName = entity.ClientName,
             ClientPhone = entity.ClientPhone,
-            LocationId = entity.LocationId,
-            LocationName = entity.Location?.Name,  // ? Now works correctly!
+            InventoryId = entity.InventoryId,
+            InventoryName = entity.Inventory?.Name,  // ? Now works correctly!
             Description = entity.Description,
             OrderDate = entity.OrderDate,
             TotalAmount = entity.TotalAmount,

@@ -91,6 +91,44 @@ public class RegisterCommandHandler : IRequestHandler<RegisterCommand, Result<Gu
             // 6. Add user to database
             await _unitOfWork.Users.AddAsync(user, cancellationToken);
 
+            // 6b. Assign default inventories if provided
+            if (request.DefaultInventoryIds != null && request.DefaultInventoryIds.Any())
+            {
+                foreach (var inventoryId in request.DefaultInventoryIds)
+                {
+                    var inventory = await _unitOfWork.Inventories.GetByIdAsync(inventoryId, cancellationToken);
+                    if (inventory != null)
+                    {
+                        user.DefaultInventories.Add(new UserDefaultInventory
+                        {
+                            Id = Guid.NewGuid(),
+                            UserId = user.Id,
+                            InventoryId = inventoryId,
+                            CreatedAt = DateTime.UtcNow
+                        });
+                    }
+                }
+            }
+
+            // 6c. Assign default locations if provided
+            if (request.DefaultLocationIds != null && request.DefaultLocationIds.Any())
+            {
+                foreach (var locationId in request.DefaultLocationIds)
+                {
+                    var location = await _unitOfWork.Locations.GetByIdAsync(locationId, cancellationToken);
+                    if (location != null)
+                    {
+                        user.DefaultLocations.Add(new UserDefaultLocation
+                        {
+                            Id = Guid.NewGuid(),
+                            UserId = user.Id,
+                            LocationId = locationId,
+                            CreatedAt = DateTime.UtcNow
+                        });
+                    }
+                }
+            }
+
             // 7. Assign default "User" role
             var userRole = new UserRole
             {

@@ -26,6 +26,10 @@ public class UserRepository : GenericRepository<User>, IUserRepository
     public async Task<User?> GetByUsernameOrEmailAsync(string usernameOrEmail, CancellationToken cancellationToken = default)
     {
         return await _dbSet
+            .Include(u => u.DefaultInventories)
+                .ThenInclude(di => di.Inventory)
+            .Include(u => u.DefaultLocations)
+                .ThenInclude(dl => dl.Location)
             .FirstOrDefaultAsync(u => u.Username == usernameOrEmail || u.Email == usernameOrEmail, cancellationToken);
     }
 
@@ -34,7 +38,10 @@ public class UserRepository : GenericRepository<User>, IUserRepository
         return await _dbSet
             .Include(u => u.UserRoles)
                 .ThenInclude(ur => ur.Role)
-            .Include(u => u.DefaultInventory)
+            .Include(u => u.DefaultInventories)
+                .ThenInclude(di => di.Inventory)
+            .Include(u => u.DefaultLocations)
+                .ThenInclude(dl => dl.Location)
             .FirstOrDefaultAsync(u => u.Id == userId, cancellationToken);
     }
 
@@ -108,7 +115,10 @@ public class UserRepository : GenericRepository<User>, IUserRepository
         var query = _dbSet
             .Include(u => u.UserRoles)
                 .ThenInclude(ur => ur.Role)
-            .Include(u => u.DefaultInventory)
+            .Include(u => u.DefaultInventories)
+                .ThenInclude(di => di.Inventory)
+            .Include(u => u.DefaultLocations)
+                .ThenInclude(dl => dl.Location)
             .OrderBy(u => u.CreatedAt);
 
         var totalCount = await query.CountAsync(cancellationToken);

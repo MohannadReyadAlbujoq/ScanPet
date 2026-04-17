@@ -50,7 +50,9 @@ public class AuthController : ControllerBase
             Password = request.Password,
             ConfirmPassword = request.ConfirmPassword,
             FullName = request.FullName,
-            PhoneNumber = request.PhoneNumber
+            PhoneNumber = request.PhoneNumber,
+            DefaultInventoryIds = request.DefaultInventoryIds,
+            DefaultLocationIds = request.DefaultLocationIds
         };
 
         var result = await _mediator.Send(command);
@@ -243,8 +245,10 @@ public class AuthController : ControllerBase
                 isAuthenticated = true,
                 isEnabled = user.IsEnabled,
                 isApproved = user.IsApproved,
-                defaultInventoryId = user.DefaultInventoryId,
-                defaultInventoryName = user.DefaultInventory?.Name,
+                defaultInventoryIds = user.DefaultInventories.Select(di => di.InventoryId).ToList(),
+                defaultInventoryNames = user.DefaultInventories.Select(di => di.Inventory?.Name).ToList(),
+                defaultLocationIds = user.DefaultLocations.Select(dl => dl.LocationId).ToList(),
+                defaultLocationNames = user.DefaultLocations.Select(dl => dl.Location?.Name).ToList(),
                 roles = user.UserRoles.Select(ur => ur.Role.Name).ToList()
             }
         });

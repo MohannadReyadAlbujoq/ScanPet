@@ -18,8 +18,8 @@ public class CreateOrderValidator : AbstractValidator<CreateOrderCommand>
             .NotEmpty().WithMessage("Client phone is required")
             .MaximumLength(20).WithMessage("Client phone must not exceed 20 characters");
 
-        RuleFor(x => x.LocationId)
-            .NotEmpty().WithMessage("Location ID is required");
+        RuleFor(x => x.InventoryId)
+            .NotEmpty().WithMessage("Inventory ID is required");
 
         RuleFor(x => x.OrderItems)
             .NotNull().WithMessage("Order must contain items")

@@ -28,14 +28,14 @@ public class OrderDto
     public string? ClientPhone { get; set; }
     
     /// <summary>
-    /// Location ID (required for create/update)
+    /// Inventory ID (required for create/update)
     /// </summary>
-    public Guid? LocationId { get; set; }
-    
+    public Guid? InventoryId { get; set; }
+
     /// <summary>
-    /// Location name (only in responses)
+    /// Inventory name (only in responses)
     /// </summary>
-    public string? LocationName { get; set; }
+    public string? InventoryName { get; set; }
     
     /// <summary>
     /// Order description/notes (optional)

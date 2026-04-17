@@ -36,7 +36,7 @@ public class CreateUserCommandHandler : BaseCreateHandler<CreateUserCommand, Use
         // Hash password
         var passwordHash = _passwordService.HashPassword(command.Password);
 
-        return new User
+        var user = new User
         {
             Id = Guid.NewGuid(),
             Username = command.Username,
@@ -44,11 +44,42 @@ public class CreateUserCommandHandler : BaseCreateHandler<CreateUserCommand, Use
             PasswordHash = passwordHash,
             FullName = command.FullName,
             PhoneNumber = command.PhoneNumber,
-            DefaultInventoryId = command.DefaultInventoryId,
             IsEnabled = false, // Disabled by default
             IsApproved = false, // Not approved by default
             IsDeleted = false
         };
+
+        // Assign default inventories
+        if (command.DefaultInventoryIds != null && command.DefaultInventoryIds.Any())
+        {
+            foreach (var inventoryId in command.DefaultInventoryIds)
+            {
+                user.DefaultInventories.Add(new UserDefaultInventory
+                {
+                    Id = Guid.NewGuid(),
+                    UserId = user.Id,
+                    InventoryId = inventoryId,
+                    CreatedAt = DateTime.UtcNow
+                });
+            }
+        }
+
+        // Assign default locations
+        if (command.DefaultLocationIds != null && command.DefaultLocationIds.Any())
+        {
+            foreach (var locationId in command.DefaultLocationIds)
+            {
+                user.DefaultLocations.Add(new UserDefaultLocation
+                {
+                    Id = Guid.NewGuid(),
+                    UserId = user.Id,
+                    LocationId = locationId,
+                    CreatedAt = DateTime.UtcNow
+                });
+            }
+        }
+
+        return user;
     }
 
     protected override Task AddEntityAsync(User entity, CancellationToken cancellationToken)

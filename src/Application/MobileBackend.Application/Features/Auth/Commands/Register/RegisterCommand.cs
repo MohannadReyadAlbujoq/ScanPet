@@ -16,4 +16,6 @@ public class RegisterCommand : IRequest<Result<Guid>>
     public string ConfirmPassword { get; set; } = string.Empty;
     public string FullName { get; set; } = string.Empty;
     public string? PhoneNumber { get; set; }
+    public List<Guid>? DefaultInventoryIds { get; set; }
+    public List<Guid>? DefaultLocationIds { get; set; }
 }

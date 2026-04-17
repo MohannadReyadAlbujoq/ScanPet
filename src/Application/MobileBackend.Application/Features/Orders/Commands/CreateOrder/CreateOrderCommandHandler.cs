@@ -36,11 +36,11 @@ public class CreateOrderCommandHandler : IRequestHandler<CreateOrderCommand, Res
     {
         try
         {
-            // Validate location exists
-            var location = await _unitOfWork.Locations.GetByIdAsync(request.LocationId);
-            if (location == null)
+            // Validate inventory exists
+            var inventory = await _unitOfWork.Inventories.GetByIdAsync(request.InventoryId);
+            if (inventory == null)
             {
-                return Result<Guid>.FailureResult("Location not found", 404);
+                return Result<Guid>.FailureResult("Inventory not found", 404);
             }
 
             // Validate items exist and have sufficient quantity
@@ -146,7 +146,7 @@ public class CreateOrderCommandHandler : IRequestHandler<CreateOrderCommand, Res
                 OrderNumber = orderNumber,
                 ClientName = request.ClientName,
                 ClientPhone = request.ClientPhone,
-                LocationId = request.LocationId,
+                InventoryId = request.InventoryId,
                 Description = request.Description,
                 OrderDate = DateTime.UtcNow,
                 TotalAmount = totalAmount,

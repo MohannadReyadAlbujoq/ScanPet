@@ -43,7 +43,12 @@ public class Inventory : BaseEntity, ISoftDelete
     /// Items stored in this inventory with their quantities
     /// </summary>
     public virtual ICollection<ItemInventory> ItemInventories { get; set; } = new List<ItemInventory>();
-    
+
+    /// <summary>
+    /// Orders placed against this inventory
+    /// </summary>
+    public virtual ICollection<Order> Orders { get; set; } = new List<Order>();
+
     /// <summary>
     /// Parent location this inventory/section belongs to (optional)
     /// </summary>

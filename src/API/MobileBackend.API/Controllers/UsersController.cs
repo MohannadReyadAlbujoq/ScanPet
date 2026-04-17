@@ -6,6 +6,7 @@ using MobileBackend.Application.DTOs.Users;
 using MobileBackend.Application.Features.Users.Commands.ApproveUser;
 using MobileBackend.Application.Features.Users.Commands.CreateUser;
 using MobileBackend.Application.Features.Users.Commands.SetDefaultInventory;
+using MobileBackend.Application.Features.Users.Commands.SetDefaultLocations;
 using MobileBackend.Application.Features.Users.Commands.ToggleUserStatus;
 using MobileBackend.Application.Features.Users.Commands.UpdateUserRole;
 using MobileBackend.Application.Features.Users.Queries.GetAllUsers;
@@ -95,7 +96,8 @@ public class UsersController : BaseApiController
             Password = dto.Password,
             FullName = dto.FullName,
             PhoneNumber = dto.PhoneNumber,
-            DefaultInventoryId = dto.DefaultInventoryId
+            DefaultInventoryIds = dto.DefaultInventoryIds,
+            DefaultLocationIds = dto.DefaultLocationIds
         };
 
         var result = await Mediator.Send(command);
@@ -253,13 +255,39 @@ public class UsersController : BaseApiController
         var command = new SetDefaultInventoryCommand
         {
             UserId = id,
-            DefaultInventoryId = request.DefaultInventoryId
+            DefaultInventoryIds = request.DefaultInventoryIds
         };
 
         var result = await Mediator.Send(command);
 
         return result.Success 
             ? OkResponse("User default inventory updated successfully") 
+            : ErrorResponse(result);
+    }
+
+    /// <summary>
+    /// Set user's default locations (replaces the full list)
+    /// </summary>
+    /// <param name="id">User ID</param>
+    /// <param name="request">Default locations list</param>
+    /// <returns>Success response</returns>
+    [HttpPut("{id}/default-locations")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public async Task<IActionResult> SetDefaultLocations(Guid id, [FromBody] SetDefaultLocationsDto request)
+    {
+        var command = new SetDefaultLocationsCommand
+        {
+            UserId = id,
+            DefaultLocationIds = request.DefaultLocationIds
+        };
+
+        var result = await Mediator.Send(command);
+
+        return result.Success
+            ? OkResponse("User default locations updated successfully")
             : ErrorResponse(result);
     }
 }

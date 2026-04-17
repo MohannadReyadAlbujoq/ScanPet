@@ -34,4 +34,14 @@ public class RegisterRequestDto
     /// Phone number (optional)
     /// </summary>
     public string? PhoneNumber { get; set; }
+
+    /// <summary>
+    /// Default inventory IDs to assign on registration (optional)
+    /// </summary>
+    public List<Guid>? DefaultInventoryIds { get; set; }
+
+    /// <summary>
+    /// Default location IDs to assign on registration (optional)
+    /// </summary>
+    public List<Guid>? DefaultLocationIds { get; set; }
 }

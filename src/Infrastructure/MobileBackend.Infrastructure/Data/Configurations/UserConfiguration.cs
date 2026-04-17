@@ -49,10 +49,15 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
             .IsRequired()
             .HasDefaultValue(false);
 
-        builder.HasOne(u => u.DefaultInventory)
-            .WithMany()
-            .HasForeignKey(u => u.DefaultInventoryId)
-            .OnDelete(DeleteBehavior.SetNull);
+        builder.HasMany(u => u.DefaultInventories)
+            .WithOne(di => di.User)
+            .HasForeignKey(di => di.UserId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        builder.HasMany(u => u.DefaultLocations)
+            .WithOne(dl => dl.User)
+            .HasForeignKey(dl => dl.UserId)
+            .OnDelete(DeleteBehavior.Cascade);
 
         builder.Property(u => u.CreatedAt)
             .IsRequired();
