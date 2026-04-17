@@ -22,11 +22,6 @@ public class Location : BaseEntity, ISoftDelete
     
     // Navigation Properties
     /// <summary>
-    /// Orders delivered to this location
-    /// </summary>
-    public virtual ICollection<Order> Orders { get; set; } = new List<Order>();
-    
-    /// <summary>
     /// Inventory sections/warehouses within this location
     /// </summary>
     public virtual ICollection<Inventory> Inventories { get; set; } = new List<Inventory>();

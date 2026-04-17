@@ -12,8 +12,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace MobileBackend.Infrastructure.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20260417044431_UserDefaultInventoriesAndLocations")]
-    partial class UserDefaultInventoriesAndLocations
+    [Migration("20260417152251_UserDefaultsAndOrderInventory")]
+    partial class UserDefaultsAndOrderInventory
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -466,9 +466,6 @@ namespace MobileBackend.Infrastructure.Migrations
                         .HasColumnType("boolean")
                         .HasDefaultValue(false);
 
-                    b.Property<Guid?>("LocationId")
-                        .HasColumnType("uuid");
-
                     b.Property<DateTime>("OrderDate")
                         .HasColumnType("timestamp with time zone");
 
@@ -503,8 +500,6 @@ namespace MobileBackend.Infrastructure.Migrations
                     b.HasIndex("CreatedBy");
 
                     b.HasIndex("InventoryId");
-
-                    b.HasIndex("LocationId");
 
                     b.HasIndex("OrderDate")
                         .HasFilter("\"IsDeleted\" = false");
@@ -1101,10 +1096,6 @@ namespace MobileBackend.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.HasOne("MobileBackend.Domain.Entities.Location", null)
-                        .WithMany("Orders")
-                        .HasForeignKey("LocationId");
-
                     b.Navigation("Inventory");
                 });
 
@@ -1276,8 +1267,6 @@ namespace MobileBackend.Infrastructure.Migrations
             modelBuilder.Entity("MobileBackend.Domain.Entities.Location", b =>
                 {
                     b.Navigation("Inventories");
-
-                    b.Navigation("Orders");
                 });
 
             modelBuilder.Entity("MobileBackend.Domain.Entities.Order", b =>

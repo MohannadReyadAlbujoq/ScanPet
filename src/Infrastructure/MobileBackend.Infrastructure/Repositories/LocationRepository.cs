@@ -38,7 +38,7 @@ public class LocationRepository : GenericRepository<Location>, ILocationReposito
             .Select(l => new
             {
                 Location = l,
-                OrderCount = l.Orders.Count(o => !o.IsDeleted)
+                OrderCount = l.Inventories.SelectMany(i => i.Orders).Count(o => !o.IsDeleted)
             })
             .ToListAsync(cancellationToken);
 
@@ -53,7 +53,7 @@ public class LocationRepository : GenericRepository<Location>, ILocationReposito
             .Select(l => new
             {
                 Location = l,
-                OrderCount = l.Orders.Count(o => !o.IsDeleted)
+                OrderCount = l.Inventories.SelectMany(i => i.Orders).Count(o => !o.IsDeleted)
             })
             .FirstOrDefaultAsync(cancellationToken);
 
@@ -72,7 +72,7 @@ public class LocationRepository : GenericRepository<Location>, ILocationReposito
             .Select(l => new
             {
                 Location = l,
-                OrderCount = l.Orders.Count(o => !o.IsDeleted),
+                OrderCount = l.Inventories.SelectMany(i => i.Orders).Count(o => !o.IsDeleted),
                 SectionCount = l.Inventories.Count(i => !i.IsDeleted)
             })
             .ToListAsync(cancellationToken);

@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace MobileBackend.Infrastructure.Migrations
 {
     /// <inheritdoc />
-    public partial class UserDefaultInventoriesAndLocations : Migration
+    public partial class UserDefaultsAndOrderInventory : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -27,20 +27,63 @@ namespace MobileBackend.Infrastructure.Migrations
                 name: "DefaultInventoryId",
                 table: "Users");
 
-            migrationBuilder.AlterColumn<Guid>(
-                name: "LocationId",
-                table: "Orders",
-                type: "uuid",
-                nullable: true,
-                oldClrType: typeof(Guid),
-                oldType: "uuid");
-
+            // Step 1: Add InventoryId as nullable first
             migrationBuilder.AddColumn<Guid>(
                 name: "InventoryId",
                 table: "Orders",
                 type: "uuid",
+                nullable: true);
+
+            // Step 2: Migrate existing orders — map LocationId to first inventory at that location
+            migrationBuilder.Sql(@"
+                UPDATE ""Orders"" o
+                SET ""InventoryId"" = (
+                    SELECT i.""Id""
+                    FROM ""Inventories"" i
+                    WHERE i.""LocationId"" = o.""LocationId""
+                      AND i.""IsDeleted"" = false
+                    LIMIT 1
+                )
+                WHERE o.""InventoryId"" IS NULL
+                  AND o.""LocationId"" IS NOT NULL;
+            ");
+
+            // Step 3: For any orders still without an InventoryId, assign the first active inventory
+            migrationBuilder.Sql(@"
+                UPDATE ""Orders""
+                SET ""InventoryId"" = (
+                    SELECT ""Id"" FROM ""Inventories""
+                    WHERE ""IsDeleted"" = false
+                    LIMIT 1
+                )
+                WHERE ""InventoryId"" IS NULL;
+            ");
+
+            // Step 4: Make InventoryId non-nullable
+            migrationBuilder.AlterColumn<Guid>(
+                name: "InventoryId",
+                table: "Orders",
+                type: "uuid",
                 nullable: false,
-                defaultValue: new Guid("00000000-0000-0000-0000-000000000000"));
+                defaultValue: new Guid("00000000-0000-0000-0000-000000000000"),
+                oldClrType: typeof(Guid),
+                oldType: "uuid",
+                oldNullable: true);
+
+            // Step 5: Drop LocationId column and its index
+            migrationBuilder.DropIndex(
+                name: "IX_Orders_LocationId",
+                table: "Orders");
+
+            migrationBuilder.DropColumn(
+                name: "LocationId",
+                table: "Orders");
+
+            // Step 6: Create index on InventoryId
+            migrationBuilder.CreateIndex(
+                name: "IX_Orders_InventoryId",
+                table: "Orders",
+                column: "InventoryId");
 
             migrationBuilder.CreateTable(
                 name: "UserDefaultInventories",
@@ -101,11 +144,6 @@ namespace MobileBackend.Infrastructure.Migrations
                 });
 
             migrationBuilder.CreateIndex(
-                name: "IX_Orders_InventoryId",
-                table: "Orders",
-                column: "InventoryId");
-
-            migrationBuilder.CreateIndex(
                 name: "IX_UserDefaultInventories_InventoryId",
                 table: "UserDefaultInventories",
                 column: "InventoryId");
@@ -134,13 +172,6 @@ namespace MobileBackend.Infrastructure.Migrations
                 principalTable: "Inventories",
                 principalColumn: "Id",
                 onDelete: ReferentialAction.Restrict);
-
-            migrationBuilder.AddForeignKey(
-                name: "FK_Orders_Locations_LocationId",
-                table: "Orders",
-                column: "LocationId",
-                principalTable: "Locations",
-                principalColumn: "Id");
         }
 
         /// <inheritdoc />
@@ -150,39 +181,27 @@ namespace MobileBackend.Infrastructure.Migrations
                 name: "FK_Orders_Inventories_InventoryId",
                 table: "Orders");
 
-            migrationBuilder.DropForeignKey(
-                name: "FK_Orders_Locations_LocationId",
-                table: "Orders");
-
             migrationBuilder.DropTable(
                 name: "UserDefaultInventories");
 
             migrationBuilder.DropTable(
                 name: "UserDefaultLocations");
 
-            migrationBuilder.DropIndex(
-                name: "IX_Orders_InventoryId",
-                table: "Orders");
-
-            migrationBuilder.DropColumn(
+            migrationBuilder.RenameColumn(
                 name: "InventoryId",
-                table: "Orders");
+                table: "Orders",
+                newName: "LocationId");
+
+            migrationBuilder.RenameIndex(
+                name: "IX_Orders_InventoryId",
+                table: "Orders",
+                newName: "IX_Orders_LocationId");
 
             migrationBuilder.AddColumn<Guid>(
                 name: "DefaultInventoryId",
                 table: "Users",
                 type: "uuid",
                 nullable: true);
-
-            migrationBuilder.AlterColumn<Guid>(
-                name: "LocationId",
-                table: "Orders",
-                type: "uuid",
-                nullable: false,
-                defaultValue: new Guid("00000000-0000-0000-0000-000000000000"),
-                oldClrType: typeof(Guid),
-                oldType: "uuid",
-                oldNullable: true);
 
             migrationBuilder.CreateIndex(
                 name: "IX_Users_DefaultInventoryId",

@@ -401,7 +401,24 @@
             "url": { "raw": "{{baseUrl}}/api/colors/{{colorId}}", "host": ["{{baseUrl}}"], "path": ["api", "colors", "{{colorId}}"] }
           }
         },
-        { "name": "Delete Color", "request": { "method": "DELETE", "header": [], "url": { "raw": "{{baseUrl}}/api/colors/{{colorId}}", "host": ["{{baseUrl}}"], "path": ["api", "colors", "{{colorId}}"] } } }
+        { "name": "Delete Color", "request": { "method": "DELETE", "header": [], "url": { "raw": "{{baseUrl}}/api/colors/{{colorId}}", "host": ["{{baseUrl}}"], "path": ["api", "colors", "{{colorId}}"] } } },
+        {
+          "name": "Search Colors",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/colors/search?searchTerm=blue&pageNumber=1&pageSize=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "colors", "search"],
+              "query": [
+                { "key": "searchTerm", "value": "blue" },
+                { "key": "pageNumber", "value": "1" },
+                { "key": "pageSize", "value": "10" }
+              ]
+            }
+          }
+        }
       ]
     },
     {
@@ -440,7 +457,25 @@
             "url": { "raw": "{{baseUrl}}/api/items", "host": ["{{baseUrl}}"], "path": ["api", "items"] }
           }
         },
-        { "name": "Delete Item", "request": { "method": "DELETE", "header": [], "url": { "raw": "{{baseUrl}}/api/items/{{itemId}}", "host": ["{{baseUrl}}"], "path": ["api", "items", "{{itemId}}"] } } }
+        { "name": "Delete Item", "request": { "method": "DELETE", "header": [], "url": { "raw": "{{baseUrl}}/api/items/{{itemId}}", "host": ["{{baseUrl}}"], "path": ["api", "items", "{{itemId}}"] } } },
+        {
+          "name": "Update Item (multipart/form-data)",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "name", "value": "Pet Food Premium Updated", "type": "text" },
+                { "key": "description", "value": "Updated high-quality pet food", "type": "text" },
+                { "key": "sku", "value": "PF-NEW-001", "type": "text" },
+                { "key": "basePrice", "value": "34.99", "type": "text" },
+                { "key": "image", "type": "file", "src": [] }
+              ]
+            },
+            "url": { "raw": "{{baseUrl}}/api/items/{{itemId}}", "host": ["{{baseUrl}}"], "path": ["api", "items", "{{itemId}}"] }
+          }
+        }
       ]
     },
     {
@@ -500,7 +535,7 @@
         { "name": "Get Active Inventories", "request": { "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}/api/inventories/active", "host": ["{{baseUrl}}"], "path": ["api", "inventories", "active"] } } },
         { "name": "Get Low Stock Items", "request": { "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}/api/inventories/low-stock", "host": ["{{baseUrl}}"], "path": ["api", "inventories", "low-stock"] } } },
         {
-          "name": "Get Item Counts — All Inventories (v4 NEW)",
+          "name": "Get Item Counts ï¿½ All Inventories (v4 NEW)",
           "request": {
             "method": "GET",
             "header": [],
@@ -509,7 +544,7 @@
           }
         },
         {
-          "name": "Get Item Counts — Single Inventory (v4 NEW)",
+          "name": "Get Item Counts ï¿½ Single Inventory (v4 NEW)",
           "request": {
             "method": "GET",
             "header": [],

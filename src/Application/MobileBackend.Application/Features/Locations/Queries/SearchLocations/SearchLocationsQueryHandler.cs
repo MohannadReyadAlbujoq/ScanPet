@@ -49,7 +49,7 @@ public class SearchLocationsQueryHandler : BaseSearchHandler<SearchLocationsQuer
             Country = entity.Country,
             PostalCode = entity.PostalCode,
             IsActive = entity.IsActive,
-            OrderCount = entity.Orders?.Count(o => !o.IsDeleted) ?? 0,
+            OrderCount = 0, // OrderCount now computed at repository level via Inventories
             CreatedAt = entity.CreatedAt,
             UpdatedAt = entity.UpdatedAt
         };
