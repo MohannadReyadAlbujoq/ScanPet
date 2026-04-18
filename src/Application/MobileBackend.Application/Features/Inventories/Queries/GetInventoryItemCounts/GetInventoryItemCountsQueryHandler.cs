@@ -6,91 +6,187 @@ using MobileBackend.Application.Interfaces;
 
 namespace MobileBackend.Application.Features.Inventories.Queries.GetInventoryItemCounts;
 
-/// <summary>
-/// Handler: returns item quantity counts grouped by inventory.
-/// Uses a single DB call per inventory leveraging the existing
-/// IItemInventoryRepository.GetByInventoryIdAsync method.
-/// Placed on the Inventories controller as GET /api/inventories/item-counts
-/// (or GET /api/inventories/{id}/item-counts for a single inventory).
-/// </summary>
-public class GetInventoryItemCountsQueryHandler
-    : IRequestHandler<GetInventoryItemCountsQuery, Result<List<InventoryItemCountDto>>>
+// ?????????????????????????????????????????????????????????????
+// Handler: GET /api/inventories/item-counts  (all inventories)
+// Returns global totals + per-inventory breakdown
+// ?????????????????????????????????????????????????????????????
+public class GetAllInventoriesItemCountsQueryHandler
+    : IRequestHandler<GetAllInventoriesItemCountsQuery, Result<AllInventoriesItemCountDto>>
 {
     private readonly IUnitOfWork _unitOfWork;
-    private readonly ILogger<GetInventoryItemCountsQueryHandler> _logger;
+    private readonly ILogger<GetAllInventoriesItemCountsQueryHandler> _logger;
 
-    public GetInventoryItemCountsQueryHandler(
+    public GetAllInventoriesItemCountsQueryHandler(
         IUnitOfWork unitOfWork,
-        ILogger<GetInventoryItemCountsQueryHandler> logger)
+        ILogger<GetAllInventoriesItemCountsQueryHandler> logger)
     {
         _unitOfWork = unitOfWork;
         _logger = logger;
     }
 
-    public async Task<Result<List<InventoryItemCountDto>>> Handle(
-        GetInventoryItemCountsQuery request,
+    public async Task<Result<AllInventoriesItemCountDto>> Handle(
+        GetAllInventoriesItemCountsQuery request,
         CancellationToken cancellationToken)
     {
         try
         {
-            // Determine which inventories to summarise
-            List<Domain.Entities.Inventory> inventories;
+            var inventories = (await _unitOfWork.Inventories
+                .FindAsync(i => !i.IsDeleted, cancellationToken))
+                .ToList();
 
-            if (request.InventoryId.HasValue)
-            {
-                var single = await _unitOfWork.Inventories.GetByIdAsync(request.InventoryId.Value, cancellationToken);
-                if (single == null)
-                    return Result<List<InventoryItemCountDto>>.FailureResult(
-                        $"Inventory with ID {request.InventoryId.Value} not found", 404);
+            var perInventory = new List<InventoryItemCountDto>();
 
-                inventories = new List<Domain.Entities.Inventory> { single };
-            }
-            else
-            {
-                // GetAllAsync from generic repo (no N+1 — items loaded per-inventory below)
-                var all = await _unitOfWork.Inventories.FindAsync(
-                    i => !i.IsDeleted, cancellationToken);
-                inventories = all.ToList();
-            }
-
-            var result = new List<InventoryItemCountDto>();
+            // Collect every ItemInventory row across all inventories to compute globals
+            // key = ItemId, value = accumulated data
+            var globalMap = new Dictionary<Guid, (string Name, string? SKU, int Qty, int InvCount, bool LowAnywhere)>();
 
             foreach (var inv in inventories)
             {
-                // Reuse existing repo method — already includes Item + Color
-                var itemInventories = await _unitOfWork.ItemInventories
+                var rows = await _unitOfWork.ItemInventories
                     .GetByInventoryIdAsync(inv.Id, cancellationToken);
 
-                var items = itemInventories
+                var items = rows
                     .Select(ii => new ItemCountEntryDto
                     {
-                        ItemId = ii.ItemId,
-                        ItemName = ii.Item?.Name ?? "Unknown",
-                        ItemSKU = ii.Item?.SKU,
-                        Quantity = ii.Quantity,
+                        ItemId          = ii.ItemId,
+                        ItemName        = ii.Item?.Name ?? "Unknown",
+                        ItemSKU         = ii.Item?.SKU,
+                        Quantity        = ii.Quantity,
                         MinimumQuantity = ii.MinimumQuantity,
-                        IsLowStock = ii.MinimumQuantity.HasValue && ii.Quantity <= ii.MinimumQuantity.Value
+                        IsLowStock      = ii.MinimumQuantity.HasValue && ii.Quantity <= ii.MinimumQuantity.Value
                     })
                     .OrderByDescending(x => x.Quantity)
                     .ToList();
 
-                result.Add(new InventoryItemCountDto
+                perInventory.Add(new InventoryItemCountDto
                 {
-                    InventoryId = inv.Id,
-                    InventoryName = inv.Name,
-                    IsActive = inv.IsActive,
+                    InventoryId    = inv.Id,
+                    InventoryName  = inv.Name,
+                    IsActive       = inv.IsActive,
                     TotalItemTypes = items.Count,
-                    TotalQuantity = items.Sum(i => i.Quantity),
-                    Items = items
+                    TotalQuantity  = items.Sum(i => i.Quantity),
+                    Items          = items
                 });
+
+                // Accumulate into global map
+                foreach (var entry in items)
+                {
+                    if (globalMap.TryGetValue(entry.ItemId, out var existing))
+                    {
+                        globalMap[entry.ItemId] = (
+                            existing.Name,
+                            existing.SKU,
+                            existing.Qty + entry.Quantity,
+                            existing.InvCount + 1,
+                            existing.LowAnywhere || entry.IsLowStock
+                        );
+                    }
+                    else
+                    {
+                        globalMap[entry.ItemId] = (
+                            entry.ItemName,
+                            entry.ItemSKU,
+                            entry.Quantity,
+                            1,
+                            entry.IsLowStock
+                        );
+                    }
+                }
             }
 
-            return Result<List<InventoryItemCountDto>>.SuccessResult(result);
+            var globalTotals = globalMap
+                .Select(kv => new GlobalItemTotalDto
+                {
+                    ItemId            = kv.Key,
+                    ItemName          = kv.Value.Name,
+                    ItemSKU           = kv.Value.SKU,
+                    TotalQuantity     = kv.Value.Qty,
+                    InventoryCount    = kv.Value.InvCount,
+                    IsLowStockAnywhere = kv.Value.LowAnywhere
+                })
+                .OrderByDescending(x => x.TotalQuantity)
+                .ToList();
+
+            var response = new AllInventoriesItemCountDto
+            {
+                GlobalTotalItemTypes = globalMap.Count,
+                GlobalTotalQuantity  = globalMap.Values.Sum(v => v.Qty),
+                GlobalItemTotals     = globalTotals,
+                Inventories          = perInventory
+            };
+
+            return Result<AllInventoriesItemCountDto>.SuccessResult(response);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error retrieving inventory item counts");
-            return Result<List<InventoryItemCountDto>>.FailureResult(
+            _logger.LogError(ex, "Error retrieving all-inventories item counts");
+            return Result<AllInventoriesItemCountDto>.FailureResult(
+                "An error occurred while retrieving inventory item counts", 500);
+        }
+    }
+}
+
+// ?????????????????????????????????????????????????????????????
+// Handler: GET /api/inventories/{inventoryId}/item-counts
+// Returns breakdown for a single inventory
+// ?????????????????????????????????????????????????????????????
+public class GetSingleInventoryItemCountsQueryHandler
+    : IRequestHandler<GetSingleInventoryItemCountsQuery, Result<InventoryItemCountDto>>
+{
+    private readonly IUnitOfWork _unitOfWork;
+    private readonly ILogger<GetSingleInventoryItemCountsQueryHandler> _logger;
+
+    public GetSingleInventoryItemCountsQueryHandler(
+        IUnitOfWork unitOfWork,
+        ILogger<GetSingleInventoryItemCountsQueryHandler> logger)
+    {
+        _unitOfWork = unitOfWork;
+        _logger = logger;
+    }
+
+    public async Task<Result<InventoryItemCountDto>> Handle(
+        GetSingleInventoryItemCountsQuery request,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var inv = await _unitOfWork.Inventories.GetByIdAsync(request.InventoryId, cancellationToken);
+            if (inv == null)
+                return Result<InventoryItemCountDto>.FailureResult(
+                    $"Inventory with ID {request.InventoryId} not found", 404);
+
+            var rows = await _unitOfWork.ItemInventories
+                .GetByInventoryIdAsync(inv.Id, cancellationToken);
+
+            var items = rows
+                .Select(ii => new ItemCountEntryDto
+                {
+                    ItemId          = ii.ItemId,
+                    ItemName        = ii.Item?.Name ?? "Unknown",
+                    ItemSKU         = ii.Item?.SKU,
+                    Quantity        = ii.Quantity,
+                    MinimumQuantity = ii.MinimumQuantity,
+                    IsLowStock      = ii.MinimumQuantity.HasValue && ii.Quantity <= ii.MinimumQuantity.Value
+                })
+                .OrderByDescending(x => x.Quantity)
+                .ToList();
+
+            var dto = new InventoryItemCountDto
+            {
+                InventoryId    = inv.Id,
+                InventoryName  = inv.Name,
+                IsActive       = inv.IsActive,
+                TotalItemTypes = items.Count,
+                TotalQuantity  = items.Sum(i => i.Quantity),
+                Items          = items
+            };
+
+            return Result<InventoryItemCountDto>.SuccessResult(dto);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving item counts for inventory {InventoryId}", request.InventoryId);
+            return Result<InventoryItemCountDto>.FailureResult(
                 "An error occurred while retrieving inventory item counts", 500);
         }
     }

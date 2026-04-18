@@ -296,13 +296,13 @@ public class InventoriesController : BaseApiController
 
     /// <summary>
     /// Get item quantity counts for all inventories.
-    /// Returns each inventory with its total item types, total quantity, and per-item breakdown.
+    /// Returns global totals (all items summed across every inventory)
+    /// plus a per-inventory breakdown.
     /// </summary>
     [HttpGet("item-counts")]
     public async Task<IActionResult> GetAllInventoryItemCounts()
     {
-        var query = new GetInventoryItemCountsQuery();
-        var result = await Mediator.Send(query);
+        var result = await Mediator.Send(new GetAllInventoriesItemCountsQuery());
         return HandleResult(result);
     }
 
@@ -313,8 +313,7 @@ public class InventoriesController : BaseApiController
     [HttpGet("{inventoryId}/item-counts")]
     public async Task<IActionResult> GetInventoryItemCounts(Guid inventoryId)
     {
-        var query = new GetInventoryItemCountsQuery { InventoryId = inventoryId };
-        var result = await Mediator.Send(query);
+        var result = await Mediator.Send(new GetSingleInventoryItemCountsQuery { InventoryId = inventoryId });
         return HandleResult(result);
     }
 

@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "ScanPet Mobile Backend API v4",
-    "description": "Complete API collection for ScanPet Mobile Backend v4.\n\nChanges in v4 (latest):\n- Orders: Now tied to Inventory (not Location). POST /api/orders body uses `inventoryId`\n- Users: Default inventories are now an ARRAY (`defaultInventoryIds` / `defaultInventoryNames`)\n- Users: Default locations are now supported as an ARRAY (`defaultLocationIds` / `defaultLocationNames`)\n- Auth: Register body accepts `defaultInventoryIds` and `defaultLocationIds` arrays\n- Users: POST /api/users and responses include arrays for both defaults\n- Users: NEW endpoint PUT /api/users/{id}/default-locations to set the full list of default locations\n- Users: PUT /api/users/{id}/default-inventory now takes `defaultInventoryIds` array (replaces full list)\n- Auth: /me, login, and refresh responses include both default inventories and default locations arrays\n- Inventories: NEW endpoint GET /api/inventories/item-counts returns totals per item per inventory\n- Inventories: NEW endpoint GET /api/inventories/{inventoryId}/item-counts for a single inventory\n\nChanges in v3:\n- Images on Cloudinary CDN, RGB/SKU uniqueness, partial refunds, OrderItemStatus\n\nDefault credentials:\n- Admin: admin / Admin@123\n- Manager: manager / Manager@123\n- User: user / User@123",
+    - Inventories: GET /api/inventories/item-counts now returns globalTotalItemTypes, globalTotalQuantity, globalItemTotals[] (each item combined across all inventories), and inventories[] breakdown\n- Inventories: GET /api/inventories/{inventoryId}/item-counts returns single-inventory breakdown (totalItemTypes, totalQuantity, items[])
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -535,21 +535,21 @@
         { "name": "Get Active Inventories", "request": { "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}/api/inventories/active", "host": ["{{baseUrl}}"], "path": ["api", "inventories", "active"] } } },
         { "name": "Get Low Stock Items", "request": { "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}/api/inventories/low-stock", "host": ["{{baseUrl}}"], "path": ["api", "inventories", "low-stock"] } } },
         {
-          "name": "Get Item Counts � All Inventories (v4 NEW)",
+          "name": "Get Item Counts — All Inventories (v4)",
           "request": {
             "method": "GET",
             "header": [],
             "url": { "raw": "{{baseUrl}}/api/inventories/item-counts", "host": ["{{baseUrl}}"], "path": ["api", "inventories", "item-counts"] },
-            "description": "v4 NEW: Returns every inventory with totalItemTypes, totalQuantity, and per-item breakdown (itemId, itemName, itemSKU, quantity, minimumQuantity, isLowStock)."
+            "description": "Response shape:\n{\n  globalTotalItemTypes: 5,         // distinct items across ALL inventories\n  globalTotalQuantity: 350,        // sum of every qty across ALL inventories\n  globalItemTotals: [              // each item combined from all inventories\n    { itemId, itemName, itemSKU, totalQuantity, inventoryCount, isLowStockAnywhere }\n  ],\n  inventories: [                   // per-inventory breakdown\n    {\n      inventoryId, inventoryName, isActive,\n      totalItemTypes, totalQuantity,\n      items: [ { itemId, itemName, itemSKU, quantity, minimumQuantity, isLowStock } ]\n    }\n  ]\n}"
           }
         },
         {
-          "name": "Get Item Counts � Single Inventory (v4 NEW)",
+          "name": "Get Item Counts — Single Inventory (v4)",
           "request": {
             "method": "GET",
             "header": [],
             "url": { "raw": "{{baseUrl}}/api/inventories/{{inventoryId}}/item-counts", "host": ["{{baseUrl}}"], "path": ["api", "inventories", "{{inventoryId}}", "item-counts"] },
-            "description": "v4 NEW: Same shape as the all-inventories endpoint but filtered to a single inventory."
+            "description": "Response shape:\n{\n  inventoryId, inventoryName, isActive,\n  totalItemTypes, totalQuantity,\n  items: [ { itemId, itemName, itemSKU, quantity, minimumQuantity, isLowStock } ]\n}"
           }
         },
         {

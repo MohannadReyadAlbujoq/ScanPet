@@ -5,14 +5,16 @@ using MobileBackend.Application.DTOs.Inventories;
 namespace MobileBackend.Application.Features.Inventories.Queries.GetInventoryItemCounts;
 
 /// <summary>
-/// Query to get item counts per inventory.
-/// If InventoryId is provided, returns counts for that single inventory only.
-/// Otherwise returns counts for all inventories.
+/// Query for GET /api/inventories/item-counts
+/// Returns global totals + per-inventory breakdown.
 /// </summary>
-public class GetInventoryItemCountsQuery : IRequest<Result<List<InventoryItemCountDto>>>
+public class GetAllInventoriesItemCountsQuery : IRequest<Result<AllInventoriesItemCountDto>> { }
+
+/// <summary>
+/// Query for GET /api/inventories/{inventoryId}/item-counts
+/// Returns count breakdown for a single inventory.
+/// </summary>
+public class GetSingleInventoryItemCountsQuery : IRequest<Result<InventoryItemCountDto>>
 {
-    /// <summary>
-    /// Optional: filter to a single inventory
-    /// </summary>
-    public Guid? InventoryId { get; set; }
+    public Guid InventoryId { get; set; }
 }
