@@ -2,6 +2,7 @@ using MediatR;
 using Microsoft.Extensions.Logging;
 using MobileBackend.Application.Common.Constants;
 using MobileBackend.Application.Common.Interfaces;
+using MobileBackend.Application.Common.Pricing;
 using MobileBackend.Application.DTOs.Common;
 using MobileBackend.Application.Interfaces;
 using MobileBackend.Domain.Entities;
@@ -70,6 +71,12 @@ public class CreateOrderCommandHandler : IRequestHandler<CreateOrderCommand, Res
                 allItemInventories[itemId] = inventories;
             }
 
+            // v5: pre-load active discounts for the requested items in a single query
+            var now = DateTime.UtcNow;
+            var allDiscounts = (await _unitOfWork.Discounts.FindAsync(
+                d => itemIds.Contains(d.ItemId) && !d.IsDeleted,
+                cancellationToken)).ToList();
+
             decimal totalAmount = 0;
             var orderItems = new List<OrderItem>();
 
@@ -93,7 +100,18 @@ public class CreateOrderCommandHandler : IRequestHandler<CreateOrderCommand, Res
 
                 // Calculate price
                 var salePrice = itemDto.UnitPrice ?? item.BasePrice;
-                var itemTotal = salePrice * quantity;
+
+                // v5: apply discount hierarchy (Item / ItemLocation / ItemInventory)
+                var resolution = DiscountResolver.Resolve(
+                    allDiscounts,
+                    item.Id,
+                    request.InventoryId,
+                    inventory.LocationId,
+                    now);
+                var perUnitDiscount = resolution.PerUnit ?? 0m;
+                var effectiveUnit = salePrice - perUnitDiscount;
+                if (effectiveUnit < 0m) effectiveUnit = 0m;
+                var itemTotal = effectiveUnit * quantity;
 
                 // Generate or validate serial number — use SKU as serial number
                 string serialNumber;

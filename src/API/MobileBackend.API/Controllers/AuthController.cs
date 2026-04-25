@@ -242,6 +242,7 @@ public class AuthController : ControllerBase
                 email = user.Email,
                 fullName = user.FullName,
                 phoneNumber = user.PhoneNumber,
+                photoUrl = user.PhotoUrl,
                 isAuthenticated = true,
                 isEnabled = user.IsEnabled,
                 isApproved = user.IsApproved,
@@ -252,5 +253,50 @@ public class AuthController : ControllerBase
                 roles = user.UserRoles.Select(ur => ur.Role.Name).ToList()
             }
         });
+    }
+
+    /// <summary>
+    /// Upload or replace the current user's profile photo.
+    /// </summary>
+    [HttpPost("me/photo")]
+    [Authorize]
+    [Consumes("multipart/form-data")]
+    public async Task<IActionResult> SetMyPhoto([FromForm(Name = "photo")] IFormFile? photo)
+    {
+        var userIdClaim = User.FindFirst("sub")?.Value;
+        if (!Guid.TryParse(userIdClaim, out var userId))
+            return Unauthorized(new { success = false, message = "Invalid token" });
+
+        if (photo == null || photo.Length == 0)
+            return BadRequest(new { success = false, message = "Photo file is required" });
+
+        await using var stream = photo.OpenReadStream();
+        var result = await _mediator.Send(new MobileBackend.Application.Features.Users.Commands.SetUserPhoto.SetUserPhotoCommand
+        {
+            UserId = userId,
+            FileStream = stream,
+            FileName = photo.FileName
+        });
+
+        return result.Success
+            ? Ok(new { success = true, data = new { photoUrl = result.Data } })
+            : StatusCode(result.StatusCode, new { success = false, message = result.ErrorMessage });
+    }
+
+    /// <summary>
+    /// Remove the current user's profile photo.
+    /// </summary>
+    [HttpDelete("me/photo")]
+    [Authorize]
+    public async Task<IActionResult> DeleteMyPhoto()
+    {
+        var userIdClaim = User.FindFirst("sub")?.Value;
+        if (!Guid.TryParse(userIdClaim, out var userId))
+            return Unauthorized(new { success = false, message = "Invalid token" });
+
+        var result = await _mediator.Send(new MobileBackend.Application.Features.Users.Commands.DeleteUserPhoto.DeleteUserPhotoCommand { UserId = userId });
+        return result.Success
+            ? Ok(new { success = true, message = "Photo removed" })
+            : StatusCode(result.StatusCode, new { success = false, message = result.ErrorMessage });
     }
 }

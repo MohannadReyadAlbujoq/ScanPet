@@ -78,6 +78,8 @@ try
     builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
     builder.Services.AddScoped<ILoggerService, LoggerService>();
     builder.Services.AddSingleton<MobileBackend.Application.Common.Interfaces.IFileService, MobileBackend.API.Services.CloudinaryFileService>();
+    builder.Services.AddScoped<MobileBackend.Application.Common.Interfaces.ICurrentLanguage, MobileBackend.API.Services.CurrentLanguageService>();
+    builder.Services.AddScoped<MobileBackend.Application.Common.Interfaces.ITranslationService, MobileBackend.Infrastructure.Services.TranslationService>();
 
     // 5. JWT Authentication Configuration
     var jwtSettings = builder.Configuration.GetSection("JwtSettings");

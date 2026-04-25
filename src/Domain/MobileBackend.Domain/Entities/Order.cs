@@ -5,10 +5,14 @@ namespace MobileBackend.Domain.Entities;
 
 public class Order : BaseEntity, ISoftDelete
 {
+    [Searchable]
     public string OrderNumber { get; set; } = string.Empty; // Auto-generated: ORD-20250101-0001
+    [Searchable]
     public string ClientName { get; set; } = string.Empty;
+    [Searchable]
     public string ClientPhone { get; set; } = string.Empty;
     public Guid InventoryId { get; set; }
+    [Searchable]
     public string? Description { get; set; }
     public decimal TotalAmount { get; set; } = 0;
     public OrderStatus OrderStatus { get; set; } = OrderStatus.Pending;

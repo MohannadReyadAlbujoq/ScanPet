@@ -21,6 +21,13 @@ public abstract class BasePagedQuery<TDto> : IRequest<Result<List<TDto>>>
     public int? PageSize { get; set; }
 
     /// <summary>
+    /// Optional global keyword. When set, the result is filtered to entities whose
+    /// [Searchable] string properties (or any [Searchable] property on related
+    /// translation rows ? across ALL languages) contain the keyword (case-insensitive).
+    /// </summary>
+    public string? Keyword { get; set; }
+
+    /// <summary>
     /// Whether pagination is requested
     /// </summary>
     public bool IsPaginated => PageNumber.HasValue && PageSize.HasValue;

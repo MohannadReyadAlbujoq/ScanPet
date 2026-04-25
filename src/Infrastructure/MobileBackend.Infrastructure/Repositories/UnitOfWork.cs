@@ -28,6 +28,7 @@ public class UnitOfWork : IUnitOfWork
     private IRefreshTokenRepository? _refreshTokenRepository;
     private IItemInventoryRepository? _itemInventoryRepository;
     private IInventoryRepository? _inventoryRepository; // NEW
+    private IDiscountRepository? _discountRepository;
 
     // Dictionary for generic repositories
     private readonly Dictionary<Type, object> _repositories = new();
@@ -54,6 +55,7 @@ public class UnitOfWork : IUnitOfWork
     public IRefreshTokenRepository RefreshTokens => _refreshTokenRepository ??= new RefreshTokenRepository(_context);
     public IItemInventoryRepository ItemInventories => _itemInventoryRepository ??= new ItemInventoryRepository(_context);
     public IInventoryRepository Inventories => _inventoryRepository ??= new InventoryRepository(_context); // NEW
+    public IDiscountRepository Discounts => _discountRepository ??= new DiscountRepository(_context);
 
     #endregion
 

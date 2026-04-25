@@ -1,4 +1,5 @@
 using MediatR;
+using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MobileBackend.API.Controllers.Base;
@@ -35,13 +36,14 @@ public class OrdersController : BaseApiController
     [HttpGet]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    public async Task<IActionResult> GetAll([FromQuery] int? pageNumber, [FromQuery] int? pageSize, [FromQuery] int? status)
+    public async Task<IActionResult> GetAll([FromQuery] int? pageNumber, [FromQuery] int? pageSize, [FromQuery] int? status, [FromQuery] string? keyword)
     {
         var query = new GetAllOrdersQuery
         {
             PageNumber = pageNumber,
             PageSize = pageSize,
-            Status = status
+            Status = status,
+            Keyword = keyword
         };
         var result = await Mediator.Send(query);
 
@@ -142,29 +144,29 @@ public class OrdersController : BaseApiController
     }
 
     /// <summary>
-    /// Refund an order item by SKU
+    /// Refund one or more lines of an order (v5).
+    /// Body: { orderId, refundToInventoryId, refundReason, items:[{ orderItemId|itemId, quantity }] }
+    /// Returns the refunded items, refunded percent and refunded amount; the order is auto-promoted to
+    /// Refunded (all lines fully refunded) or PartiallyRefunded.
     /// </summary>
-    /// <param name="serialNumber">SKU of the item to refund (e.g., PF-001)</param>
-    /// <param name="request">Refund details including quantity and reason</param>
-    /// <returns>Result of refund operation</returns>
-    [HttpPost("refund/{serialNumber}")]
-    [ProducesResponseType(typeof(Result), StatusCodes.Status200OK)]
+    [HttpPost("refund")]
+    [ProducesResponseType(typeof(Result<RefundResultDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(Result), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(Result), StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> RefundOrderItem(string serialNumber, [FromBody] RefundOrderItemRequest request)
+    public async Task<IActionResult> RefundOrderItem([FromBody] RefundOrderItemRequest request)
     {
         var command = new RefundOrderItemCommand
         {
-            SerialNumber = serialNumber,
-            RefundQuantity = request.RefundQuantity,
+            OrderId = request.OrderId,
+            RefundToInventoryId = request.RefundToInventoryId,
             RefundReason = request.RefundReason,
-            RefundToInventoryId = request.RefundToInventoryId
+            Items = request.Items
         };
 
         var result = await Mediator.Send(command);
 
-        return result.Success 
-            ? OkResponse("Order item refunded successfully") 
+        return result.Success
+            ? OkResponse(result.Data)
             : StatusCode(result.StatusCode, new { success = false, message = result.ErrorMessage });
     }
 }

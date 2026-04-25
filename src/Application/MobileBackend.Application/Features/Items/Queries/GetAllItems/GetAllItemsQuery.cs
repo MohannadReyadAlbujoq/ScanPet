@@ -24,4 +24,10 @@ public class GetAllItemsQuery : IRequest<Result<PagedResult<ItemDto>>>
     /// Optional inventory/section ID to filter items by
     /// </summary>
     public Guid? InventoryId { get; set; }
+
+    /// <summary>
+    /// Optional keyword for global search across [Searchable] string properties
+    /// (and any related translation rows in ALL languages).
+    /// </summary>
+    public string? Keyword { get; set; }
 }

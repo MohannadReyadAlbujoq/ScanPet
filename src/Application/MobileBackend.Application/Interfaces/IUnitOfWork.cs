@@ -22,6 +22,7 @@ public interface IUnitOfWork : IDisposable
     IRefreshTokenRepository RefreshTokens { get; }
     IItemInventoryRepository ItemInventories { get; }
     IInventoryRepository Inventories { get; }
+    IDiscountRepository Discounts { get; }
 
     // Transaction management
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);

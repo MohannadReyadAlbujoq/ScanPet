@@ -8,10 +8,15 @@ namespace MobileBackend.Domain.Entities;
 /// </summary>
 public class Location : BaseEntity, ISoftDelete
 {
+    [Searchable]
     public string Name { get; set; } = string.Empty;
+    [Searchable]
     public string? Address { get; set; }
+    [Searchable]
     public string? City { get; set; }
+    [Searchable]
     public string? Country { get; set; }
+    [Searchable]
     public string? PostalCode { get; set; }
     public bool IsActive { get; set; } = true;
     

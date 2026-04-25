@@ -66,14 +66,44 @@ public class OrderDto
     /// List of order items
     /// </summary>
     public List<OrderItemDto>? OrderItems { get; set; }
-    
+
+    /// <summary>
+    /// Aggregate refunded quantity across all lines (response-only).
+    /// </summary>
+    public int? RefundedQuantity { get; set; }
+
+    /// <summary>
+    /// Aggregate refunded amount across the order (response-only).
+    /// </summary>
+    public decimal? RefundedAmount { get; set; }
+
+    /// <summary>
+    /// Aggregate refunded percent (0..100). Null when nothing refunded.
+    /// </summary>
+    public decimal? RefundedPercent { get; set; }
+
+    /// <summary>
+    /// Compact array of refunded item ids and quantities (response-only).
+    /// </summary>
+    public List<RefundedItemSummary>? RefundedItems { get; set; }
+
     /// <summary>
     /// Creation timestamp (only in responses)
     /// </summary>
     public DateTime? CreatedAt { get; set; }
-    
+
     /// <summary>
     /// Last update timestamp (only in responses)
     /// </summary>
     public DateTime? UpdatedAt { get; set; }
+}
+
+public class RefundedItemSummary
+{
+    public Guid OrderItemId { get; set; }
+    public Guid ItemId { get; set; }
+    public int RefundedQuantity { get; set; }
+    public int OrderedQuantity { get; set; }
+    public decimal RefundedAmount { get; set; }
+    public decimal RefundedPercent { get; set; }
 }

@@ -4,10 +4,12 @@ namespace MobileBackend.Domain.Entities;
 
 public class Color : BaseEntity, ISoftDelete
 {
+    [Searchable]
     public string Name { get; set; } = string.Empty;
     public int RedValue { get; set; }   // 0-255
     public int GreenValue { get; set; } // 0-255
     public int BlueValue { get; set; }  // 0-255
+    [Searchable]
     public string? Description { get; set; }
     
     // Computed property - will be stored in database using computed column

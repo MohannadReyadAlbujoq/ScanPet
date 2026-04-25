@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.Extensions.Logging;
 using MobileBackend.Application.Common.Constants;
+using MobileBackend.Application.Common.Search;
 using MobileBackend.Application.DTOs.Common;
 using MobileBackend.Application.DTOs.Items;
 using MobileBackend.Application.Interfaces;
@@ -46,8 +47,16 @@ public class GetAllItemsQueryHandler : IRequestHandler<GetAllItemsQuery, Result<
                 request.InventoryId,
                 cancellationToken);
 
+            // v5: apply keyword search across [Searchable] properties
+            var itemList = items.ToList();
+            if (!string.IsNullOrWhiteSpace(request.Keyword))
+            {
+                itemList = itemList.ApplyKeyword(request.Keyword).ToList();
+                totalCount = itemList.Count;
+            }
+
             // Map to DTOs
-            var dtos = items.Select(MapToDto).ToList();
+            var dtos = itemList.Select(MapToDto).ToList();
 
             // Build paged result with metadata
             var pagedResult = PagedResult<ItemDto>.Create(

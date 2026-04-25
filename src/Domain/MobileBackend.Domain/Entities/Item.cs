@@ -4,8 +4,11 @@ namespace MobileBackend.Domain.Entities;
 
 public class Item : BaseEntity, ISoftDelete
 {
+    [Searchable]
     public string Name { get; set; } = string.Empty;
+    [Searchable]
     public string? Description { get; set; }
+    [Searchable]
     public string? SKU { get; set; }
     public decimal BasePrice { get; set; }
     
@@ -25,6 +28,9 @@ public class Item : BaseEntity, ISoftDelete
     /// Item quantities across different inventories/warehouses
     /// </summary>
     public virtual ICollection<ItemInventory> ItemInventories { get; set; } = new List<ItemInventory>();
+
+    /// <summary>Discounts targeting this item (Item / ItemInventory / ItemLocation scopes).</summary>
+    public virtual ICollection<Discount> Discounts { get; set; } = new List<Discount>();
     
     /// <summary>
     /// Gets the total quantity across all inventories

@@ -4,7 +4,9 @@ namespace MobileBackend.Domain.Entities;
 
 public class Role : BaseEntity, ISoftDelete
 {
+    [Searchable]
     public string Name { get; set; } = string.Empty; // Admin, User, Admin.User
+    [Searchable]
     public string? Description { get; set; }
     
     // Soft Delete

@@ -134,6 +134,7 @@ public class LoginCommandHandler : IRequestHandler<LoginCommand, Result<LoginRes
                     Username = user.Username,
                     Email = user.Email,
                     FullName = user.FullName,
+                    PhotoUrl = user.PhotoUrl,
                     IsEnabled = user.IsEnabled,
                     IsApproved = user.IsApproved,
                     DefaultInventoryIds = defaultInventoryIds,

@@ -38,7 +38,7 @@ public class GetAllInventoriesItemCountsQueryHandler
 
             // Collect every ItemInventory row across all inventories to compute globals
             // key = ItemId, value = accumulated data
-            var globalMap = new Dictionary<Guid, (string Name, string? SKU, int Qty, int InvCount, bool LowAnywhere)>();
+            var globalMap = new Dictionary<Guid, (string Name, string? SKU, string? ImageUrl, int Qty, int InvCount, bool LowAnywhere)>();
 
             foreach (var inv in inventories)
             {
@@ -51,6 +51,7 @@ public class GetAllInventoriesItemCountsQueryHandler
                         ItemId          = ii.ItemId,
                         ItemName        = ii.Item?.Name ?? "Unknown",
                         ItemSKU         = ii.Item?.SKU,
+                        ItemImageUrl    = ii.Item?.ImageUrl,
                         Quantity        = ii.Quantity,
                         MinimumQuantity = ii.MinimumQuantity,
                         IsLowStock      = ii.MinimumQuantity.HasValue && ii.Quantity <= ii.MinimumQuantity.Value
@@ -76,6 +77,7 @@ public class GetAllInventoriesItemCountsQueryHandler
                         globalMap[entry.ItemId] = (
                             existing.Name,
                             existing.SKU,
+                            existing.ImageUrl ?? entry.ItemImageUrl,
                             existing.Qty + entry.Quantity,
                             existing.InvCount + 1,
                             existing.LowAnywhere || entry.IsLowStock
@@ -86,6 +88,7 @@ public class GetAllInventoriesItemCountsQueryHandler
                         globalMap[entry.ItemId] = (
                             entry.ItemName,
                             entry.ItemSKU,
+                            entry.ItemImageUrl,
                             entry.Quantity,
                             1,
                             entry.IsLowStock
@@ -100,6 +103,7 @@ public class GetAllInventoriesItemCountsQueryHandler
                     ItemId            = kv.Key,
                     ItemName          = kv.Value.Name,
                     ItemSKU           = kv.Value.SKU,
+                    ItemImageUrl      = kv.Value.ImageUrl,
                     TotalQuantity     = kv.Value.Qty,
                     InventoryCount    = kv.Value.InvCount,
                     IsLowStockAnywhere = kv.Value.LowAnywhere
@@ -164,6 +168,7 @@ public class GetSingleInventoryItemCountsQueryHandler
                     ItemId          = ii.ItemId,
                     ItemName        = ii.Item?.Name ?? "Unknown",
                     ItemSKU         = ii.Item?.SKU,
+                    ItemImageUrl    = ii.Item?.ImageUrl,
                     Quantity        = ii.Quantity,
                     MinimumQuantity = ii.MinimumQuantity,
                     IsLowStock      = ii.MinimumQuantity.HasValue && ii.Quantity <= ii.MinimumQuantity.Value

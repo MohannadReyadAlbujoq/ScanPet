@@ -27,6 +27,11 @@ public class OrderItemDto
     public string? ItemName { get; set; }
 
     /// <summary>
+    /// Item image URL (only in responses)
+    /// </summary>
+    public string? ItemImageUrl { get; set; }
+
+    /// <summary>
     /// Quantity ordered (required for create/update)
     /// </summary>
     public int? Quantity { get; set; }
@@ -60,6 +65,11 @@ public class OrderItemDto
     /// Refund amount for this item (computed: RefundedQuantity * UnitPrice)
     /// </summary>
     public decimal? RefundedAmount { get; set; }
+
+    /// <summary>
+    /// Refunded percent for this line (0..100). Null when nothing refunded.
+    /// </summary>
+    public decimal? RefundedPercent { get; set; }
 
     /// <summary>
     /// Refund reason (only in responses)

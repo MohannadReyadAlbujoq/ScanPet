@@ -4,13 +4,22 @@ namespace MobileBackend.Domain.Entities;
 
 public class User : BaseEntity, ISoftDelete
 {
+    [Searchable]
     public string Username { get; set; } = string.Empty;
+    [Searchable]
     public string Email { get; set; } = string.Empty;
     public string PasswordHash { get; set; } = string.Empty;
+    [Searchable]
     public string? PhoneNumber { get; set; }
+    [Searchable]
     public string? FullName { get; set; }
     public bool IsEnabled { get; set; } = false;
     public bool IsApproved { get; set; } = false;
+
+    /// <summary>
+    /// Profile photo URL (uploaded via FileService). Null when no photo set.
+    /// </summary>
+    public string? PhotoUrl { get; set; }
 
     /// <summary>
     /// Default inventories assigned to this user

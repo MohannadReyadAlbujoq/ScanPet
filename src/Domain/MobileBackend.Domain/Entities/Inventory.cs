@@ -11,16 +11,19 @@ public class Inventory : BaseEntity, ISoftDelete
     /// <summary>
     /// Name of the warehouse/inventory section
     /// </summary>
+    [Searchable]
     public string Name { get; set; } = string.Empty;
-    
+
     /// <summary>
     /// Physical location/address of the warehouse (standalone description)
     /// </summary>
+    [Searchable]
     public string? Location { get; set; }
-    
+
     /// <summary>
     /// Description or notes about this inventory/warehouse
     /// </summary>
+    [Searchable]
     public string? Description { get; set; }
     
     /// <summary>

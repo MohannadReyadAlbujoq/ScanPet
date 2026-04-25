@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.Extensions.Logging;
 using MobileBackend.Application.Common.Queries;
+using MobileBackend.Application.Common.Search;
 using MobileBackend.Application.DTOs.Common;
 using MobileBackend.Domain.Common;
 
@@ -39,6 +40,12 @@ public abstract class BaseGetAllHandler<TQuery, TEntity, TDto> : IRequestHandler
 
             // Get entities with optional pagination
             var entities = await GetEntitiesAsync(request, cancellationToken);
+
+            // v5: apply global keyword search across [Searchable] properties (and translations)
+            if (!string.IsNullOrWhiteSpace(request.Keyword))
+            {
+                entities = entities.ApplyKeyword(request.Keyword).ToList();
+            }
 
             // Map to DTOs
             var dtos = entities.Select(MapToDto).ToList();

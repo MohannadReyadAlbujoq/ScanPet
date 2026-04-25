@@ -67,6 +67,16 @@ public class ItemDto
     public DateTime? LastUpdatedInventoryDate { get; set; }
 
     /// <summary>
+    /// All discounts (Item / ItemInventory / ItemLocation) currently attached to this item (response-only).
+    /// </summary>
+    public List<MobileBackend.Application.DTOs.Discounts.DiscountDto>? Discounts { get; set; }
+
+    /// <summary>
+    /// Effective per-unit discount considering Item-scope discounts (response-only). Null when none.
+    /// </summary>
+    public decimal? EffectiveItemDiscount { get; set; }
+
+    /// <summary>
     /// Creation timestamp (only in responses)
     /// </summary>
     public DateTime? CreatedAt { get; set; }

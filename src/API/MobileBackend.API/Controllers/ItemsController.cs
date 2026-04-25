@@ -40,13 +40,15 @@ public class ItemsController : BaseApiController
     public async Task<IActionResult> GetAll(
         [FromQuery] int pageNumber = 1, 
         [FromQuery] int pageSize = 10,
-        [FromQuery] Guid? inventoryId = null)
+        [FromQuery] Guid? inventoryId = null,
+        [FromQuery] string? keyword = null)
     {
         var query = new GetAllItemsQuery
         {
             PageNumber = pageNumber,
             PageSize = pageSize,
-            InventoryId = inventoryId
+            InventoryId = inventoryId,
+            Keyword = keyword
         };
         var result = await Mediator.Send(query);
 

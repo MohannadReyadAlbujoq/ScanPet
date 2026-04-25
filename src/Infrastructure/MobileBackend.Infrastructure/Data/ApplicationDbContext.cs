@@ -27,6 +27,8 @@ public class ApplicationDbContext : DbContext
     public DbSet<ItemInventory> ItemInventories => Set<ItemInventory>();
     public DbSet<UserDefaultInventory> UserDefaultInventories => Set<UserDefaultInventory>();
     public DbSet<UserDefaultLocation> UserDefaultLocations => Set<UserDefaultLocation>();
+    public DbSet<Discount> Discounts => Set<Discount>();
+    public DbSet<EntityTranslation> EntityTranslations => Set<EntityTranslation>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -56,7 +58,15 @@ public class ApplicationDbContext : DbContext
 
     public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {
-        // This will be enhanced by interceptors for audit logging
+        // v5: ensure UpdatedAt/UpdatedBy are NULL on insert (a freshly created entity has no update yet).
+        var addedAuditable = ChangeTracker.Entries<Domain.Common.BaseEntity>()
+            .Where(e => e.State == EntityState.Added);
+        foreach (var entry in addedAuditable)
+        {
+            entry.Entity.UpdatedAt = null;
+            entry.Entity.UpdatedBy = null;
+        }
+
         return base.SaveChangesAsync(cancellationToken);
     }
 }

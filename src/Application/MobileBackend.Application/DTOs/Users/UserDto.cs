@@ -70,6 +70,11 @@ public class UserDto
     /// User roles (only in responses)
     /// </summary>
     public List<string>? Roles { get; set; }
+
+    /// <summary>
+    /// Profile photo URL (only in responses)
+    /// </summary>
+    public string? PhotoUrl { get; set; }
     
     /// <summary>
     /// Creation timestamp (only in responses)

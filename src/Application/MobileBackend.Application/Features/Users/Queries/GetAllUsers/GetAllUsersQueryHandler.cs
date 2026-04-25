@@ -1,4 +1,5 @@
 using MediatR;
+using MobileBackend.Application.Common.Search;
 using MobileBackend.Application.DTOs.Common;
 using MobileBackend.Application.DTOs.Users;
 using MobileBackend.Application.Interfaces;
@@ -26,14 +27,23 @@ public class GetAllUsersQueryHandler : IRequestHandler<GetAllUsersQuery, Result<
             request.PageSize,
             cancellationToken);
 
+        // v5: keyword search across [Searchable] properties
+        var users = items.ToList();
+        if (!string.IsNullOrWhiteSpace(request.Keyword))
+        {
+            users = users.ApplyKeyword(request.Keyword).ToList();
+            totalCount = users.Count;
+        }
+
         // Map to DTOs - roles already loaded, no N+1! ?
-        var userDtos = items.Select(user => new UserDto
+        var userDtos = users.Select(user => new UserDto
         {
             Id = user.Id,
             Username = user.Username,
             Email = user.Email,
             FullName = user.FullName,
             PhoneNumber = user.PhoneNumber,
+            PhotoUrl = user.PhotoUrl,
             IsEnabled = user.IsEnabled,
             IsApproved = user.IsApproved,
             DefaultInventoryIds = user.DefaultInventories.Select(di => di.InventoryId).ToList(),

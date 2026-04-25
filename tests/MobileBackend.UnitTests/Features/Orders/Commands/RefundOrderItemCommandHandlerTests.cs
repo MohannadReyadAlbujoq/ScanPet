@@ -1,5 +1,6 @@
 using FluentAssertions;
 using MobileBackend.Application.Common.Interfaces;
+using MobileBackend.Application.DTOs.Orders;
 using MobileBackend.Application.Features.Orders.Commands.RefundOrderItem;
 using MobileBackend.Application.Interfaces;
 using MobileBackend.Domain.Entities;
@@ -11,337 +12,178 @@ using Xunit;
 namespace MobileBackend.UnitTests.Features.Orders.Commands;
 
 /// <summary>
-/// Unit tests for RefundOrderItemCommandHandler
+/// Unit tests for the v5 order-level RefundOrderItemCommandHandler.
 /// </summary>
 public class RefundOrderItemCommandHandlerTests : TestBase
 {
-    private readonly Mock<IUnitOfWork> _mockUnitOfWork;
-    private readonly Mock<IOrderItemRepository> _mockOrderItemRepository;
-    private readonly Mock<IItemRepository> _mockItemRepository;
-    private readonly Mock<IInventoryRepository> _mockInventoryRepository;
-    private readonly Mock<IItemInventoryRepository> _mockItemInventoryRepository;
-    private readonly Mock<IAuditService> _mockAuditService;
-    private readonly Mock<ICurrentUserService> _mockCurrentUserService;
-    private readonly Mock<ILogger<RefundOrderItemCommandHandler>> _mockLogger;
+    private readonly Mock<IUnitOfWork> _uow;
+    private readonly Mock<IOrderRepository> _orders;
+    private readonly Mock<IOrderItemRepository> _orderItems;
+    private readonly Mock<IInventoryRepository> _inventories;
+    private readonly Mock<IItemInventoryRepository> _itemInventories;
+    private readonly Mock<IAuditService> _audit;
+    private readonly Mock<ICurrentUserService> _currentUser;
+    private readonly Mock<ILogger<RefundOrderItemCommandHandler>> _logger;
     private readonly RefundOrderItemCommandHandler _handler;
 
     public RefundOrderItemCommandHandlerTests()
     {
-        _mockUnitOfWork = CreateMock<IUnitOfWork>();
-        _mockOrderItemRepository = CreateMock<IOrderItemRepository>();
-        _mockItemRepository = CreateMock<IItemRepository>();
-        _mockInventoryRepository = CreateMock<IInventoryRepository>();
-        _mockItemInventoryRepository = CreateMock<IItemInventoryRepository>();
-        _mockAuditService = CreateMock<IAuditService>();
-        _mockCurrentUserService = CreateMock<ICurrentUserService>();
-        _mockLogger = CreateMock<ILogger<RefundOrderItemCommandHandler>>();
+        _uow = CreateMock<IUnitOfWork>();
+        _orders = CreateMock<IOrderRepository>();
+        _orderItems = CreateMock<IOrderItemRepository>();
+        _inventories = CreateMock<IInventoryRepository>();
+        _itemInventories = CreateMock<IItemInventoryRepository>();
+        _audit = CreateMock<IAuditService>();
+        _currentUser = CreateMock<ICurrentUserService>();
+        _logger = CreateMock<ILogger<RefundOrderItemCommandHandler>>();
 
-        _mockUnitOfWork.Setup(x => x.OrderItems).Returns(_mockOrderItemRepository.Object);
-        _mockUnitOfWork.Setup(x => x.Items).Returns(_mockItemRepository.Object);
-        _mockUnitOfWork.Setup(x => x.Inventories).Returns(_mockInventoryRepository.Object);
-        _mockUnitOfWork.Setup(x => x.ItemInventories).Returns(_mockItemInventoryRepository.Object);
-        _mockCurrentUserService.Setup(x => x.UserId).Returns(Guid.NewGuid());
+        _uow.Setup(x => x.Orders).Returns(_orders.Object);
+        _uow.Setup(x => x.OrderItems).Returns(_orderItems.Object);
+        _uow.Setup(x => x.Inventories).Returns(_inventories.Object);
+        _uow.Setup(x => x.ItemInventories).Returns(_itemInventories.Object);
+        _currentUser.Setup(x => x.UserId).Returns(Guid.NewGuid());
 
         _handler = new RefundOrderItemCommandHandler(
-            _mockUnitOfWork.Object,
-            _mockAuditService.Object,
-            _mockCurrentUserService.Object,
-            _mockLogger.Object);
+            _uow.Object, _audit.Object, _currentUser.Object, _logger.Object);
     }
 
-    [Fact]
-    public async Task Handle_ValidRefund_ShouldRefundOrderItemAndRestoreInventory()
+    private (Order order, OrderItem item, Inventory inv) Seed(int qty = 5, int alreadyRefunded = 0)
     {
-        // Arrange
-        var serialNumber = "PF-001";
-        var refundQuantity = 2;
-        var itemPrice = 100m;
-        var itemId = Guid.NewGuid();
         var inventoryId = Guid.NewGuid();
-
-        var command = new RefundOrderItemCommand
-        {
-            SerialNumber = serialNumber,
-            RefundQuantity = refundQuantity,
-            RefundReason = "Customer request",
-            RefundToInventoryId = inventoryId
-        };
-
-        var item = new Item
-        {
-            Id = itemId,
-            Name = "Test Item",
-            BasePrice = itemPrice
-        };
-
-        var inventory = new Inventory
-        {
-            Id = inventoryId,
-            Name = "Test Warehouse",
-            IsActive = true
-        };
-
-        var orderItem = new OrderItem
+        var inv = new Inventory { Id = inventoryId, Name = "WH", IsActive = true };
+        var oi = new OrderItem
         {
             Id = Guid.NewGuid(),
-            SerialNumber = serialNumber,
-            ItemId = itemId,
-            Quantity = 5,
-            SalePrice = itemPrice,
-            Status = OrderItemStatus.Successful,
-            RefundedQuantity = 0
+            ItemId = Guid.NewGuid(),
+            SerialNumber = "PF-001",
+            Quantity = qty,
+            SalePrice = 100m,
+            Status = alreadyRefunded == 0 ? OrderItemStatus.Successful
+                    : alreadyRefunded >= qty ? OrderItemStatus.Refunded
+                    : OrderItemStatus.PartiallyRefunded,
+            RefundedQuantity = alreadyRefunded
+        };
+        var order = new Order
+        {
+            Id = Guid.NewGuid(),
+            OrderNumber = "ORD-1",
+            InventoryId = inventoryId,
+            OrderStatus = OrderStatus.Confirmed,
+            OrderItems = new List<OrderItem> { oi }
         };
 
-        _mockOrderItemRepository
-            .Setup(x => x.GetBySerialNumberAsync(serialNumber, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(orderItem);
-
-        _mockInventoryRepository
-            .Setup(x => x.GetByIdAsync(inventoryId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(inventory);
-
-        _mockItemRepository
-            .Setup(x => x.GetByIdAsync(itemId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(item);
-
-        _mockItemInventoryRepository
-            .Setup(x => x.AdjustInventoryAsync(itemId, inventoryId, refundQuantity, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(true);
-
-        _mockOrderItemRepository
-            .Setup(x => x.Update(It.IsAny<OrderItem>()))
-            .Verifiable();
-
-        _mockUnitOfWork
-            .Setup(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(1);
-
-        // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
-
-        // Assert
-        result.Success.Should().BeTrue();
-        orderItem.Status.Should().Be(OrderItemStatus.Refunded);
-        orderItem.RefundedQuantity.Should().Be(refundQuantity);
-        orderItem.RefundedToInventoryId.Should().Be(inventoryId);
-
-        _mockItemInventoryRepository.Verify(x => x.AdjustInventoryAsync(itemId, inventoryId, refundQuantity, It.IsAny<CancellationToken>()), Times.Once);
-        _mockOrderItemRepository.Verify(x => x.Update(orderItem), Times.Once);
-        _mockUnitOfWork.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+        _orders.Setup(x => x.GetWithItemsAsync(order.Id, It.IsAny<CancellationToken>())).ReturnsAsync(order);
+        _inventories.Setup(x => x.GetByIdAsync(inventoryId, It.IsAny<CancellationToken>())).ReturnsAsync(inv);
+        _itemInventories.Setup(x => x.AdjustInventoryAsync(oi.ItemId, inventoryId, It.IsAny<int>(), It.IsAny<CancellationToken>())).ReturnsAsync(true);
+        _uow.Setup(x => x.SaveChangesAsync(It.IsAny<CancellationToken>())).ReturnsAsync(1);
+        return (order, oi, inv);
     }
 
     [Fact]
-    public async Task Handle_OrderItemNotFound_ShouldReturnFailure()
+    public async Task Handle_FullRefund_SetsOrderStatusToRefunded()
     {
-        // Arrange
-        var serialNumber = "NOTFOUND-SKU";
-        var command = new RefundOrderItemCommand
+        var (order, item, inv) = Seed(qty: 5);
+        var cmd = new RefundOrderItemCommand
         {
-            SerialNumber = serialNumber,
-            RefundQuantity = 1,
-            RefundReason = "Test",
-            RefundToInventoryId = Guid.NewGuid()
+            OrderId = order.Id,
+            RefundToInventoryId = inv.Id,
+            RefundReason = "Defect",
+            Items = new List<RefundLineDto> { new() { OrderItemId = item.Id, Quantity = 5 } }
         };
 
-        _mockOrderItemRepository
-            .Setup(x => x.GetBySerialNumberAsync(serialNumber, It.IsAny<CancellationToken>()))
-            .ReturnsAsync((OrderItem?)null);
+        var result = await _handler.Handle(cmd, CancellationToken.None);
 
-        // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
+        result.Success.Should().BeTrue();
+        result.Data!.OrderStatus.Should().Be((int)OrderStatus.Refunded);
+        result.Data.RefundedPercent.Should().Be(100m);
+        result.Data.RefundedAmount.Should().Be(500m);
+        item.Status.Should().Be(OrderItemStatus.Refunded);
+        item.RefundedQuantity.Should().Be(5);
+        order.OrderStatus.Should().Be(OrderStatus.Refunded);
+    }
 
-        // Assert
+    [Fact]
+    public async Task Handle_PartialRefund_SetsOrderStatusToPartiallyRefunded()
+    {
+        var (order, item, inv) = Seed(qty: 5);
+        var cmd = new RefundOrderItemCommand
+        {
+            OrderId = order.Id,
+            RefundToInventoryId = inv.Id,
+            Items = new List<RefundLineDto> { new() { OrderItemId = item.Id, Quantity = 2 } }
+        };
+
+        var result = await _handler.Handle(cmd, CancellationToken.None);
+
+        result.Success.Should().BeTrue();
+        result.Data!.OrderStatus.Should().Be((int)OrderStatus.PartiallyRefunded);
+        result.Data.RefundedPercent.Should().Be(40m);
+        result.Data.RefundedAmount.Should().Be(200m);
+        item.Status.Should().Be(OrderItemStatus.PartiallyRefunded);
+        order.OrderStatus.Should().Be(OrderStatus.PartiallyRefunded);
+    }
+
+    [Fact]
+    public async Task Handle_OrderNotFound_Returns404()
+    {
+        var orderId = Guid.NewGuid();
+        _orders.Setup(x => x.GetWithItemsAsync(orderId, It.IsAny<CancellationToken>())).ReturnsAsync((Order?)null);
+
+        var result = await _handler.Handle(new RefundOrderItemCommand
+        {
+            OrderId = orderId,
+            RefundToInventoryId = Guid.NewGuid(),
+            Items = new List<RefundLineDto> { new() { ItemId = Guid.NewGuid(), Quantity = 1 } }
+        }, CancellationToken.None);
+
         result.Success.Should().BeFalse();
-        result.ErrorMessage.Should().Contain("not found");
         result.StatusCode.Should().Be(404);
     }
 
     [Fact]
-    public async Task Handle_AlreadyRefunded_ShouldReturnFailure()
+    public async Task Handle_EmptyItems_Returns400()
     {
-        // Arrange
-        var serialNumber = "PF-001";
-        var command = new RefundOrderItemCommand
+        var result = await _handler.Handle(new RefundOrderItemCommand
         {
-            SerialNumber = serialNumber,
-            RefundQuantity = 1,
-            RefundToInventoryId = Guid.NewGuid()
-        };
+            OrderId = Guid.NewGuid(),
+            RefundToInventoryId = Guid.NewGuid(),
+            Items = new List<RefundLineDto>()
+        }, CancellationToken.None);
 
-        var orderItem = new OrderItem
-        {
-            SerialNumber = serialNumber,
-            Status = OrderItemStatus.Refunded,
-            RefundedQuantity = 2
-        };
-
-        _mockOrderItemRepository
-            .Setup(x => x.GetBySerialNumberAsync(serialNumber, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(orderItem);
-
-        // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
-
-        // Assert
         result.Success.Should().BeFalse();
-        result.ErrorMessage.Should().Contain("already been refunded");
         result.StatusCode.Should().Be(400);
     }
 
     [Fact]
-    public async Task Handle_DeletedOrderItem_ShouldReturnFailure()
+    public async Task Handle_ExceedRemaining_Returns400()
     {
-        // Arrange
-        var serialNumber = "PF-DELETED";
-        var command = new RefundOrderItemCommand
+        var (order, item, inv) = Seed(qty: 5, alreadyRefunded: 4);
+        var result = await _handler.Handle(new RefundOrderItemCommand
         {
-            SerialNumber = serialNumber,
-            RefundQuantity = 1,
-            RefundToInventoryId = Guid.NewGuid()
-        };
+            OrderId = order.Id,
+            RefundToInventoryId = inv.Id,
+            Items = new List<RefundLineDto> { new() { OrderItemId = item.Id, Quantity = 2 } }
+        }, CancellationToken.None);
 
-        var orderItem = new OrderItem
-        {
-            SerialNumber = serialNumber,
-            IsDeleted = true,
-            DeletedAt = DateTime.UtcNow
-        };
-
-        _mockOrderItemRepository
-            .Setup(x => x.GetBySerialNumberAsync(serialNumber, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(orderItem);
-
-        // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
-
-        // Assert
         result.Success.Should().BeFalse();
-        result.ErrorMessage.Should().Contain("been deleted");
         result.StatusCode.Should().Be(400);
     }
 
     [Fact]
-    public async Task Handle_RefundQuantityExceedsAvailable_ShouldReturnFailure()
+    public async Task Handle_InactiveInventory_Returns400()
     {
-        // Arrange
-        var serialNumber = "PF-001";
-        var command = new RefundOrderItemCommand
+        var (order, item, inv) = Seed();
+        inv.IsActive = false;
+
+        var result = await _handler.Handle(new RefundOrderItemCommand
         {
-            SerialNumber = serialNumber,
-            RefundQuantity = 10,
-            RefundToInventoryId = Guid.NewGuid()
-        };
+            OrderId = order.Id,
+            RefundToInventoryId = inv.Id,
+            Items = new List<RefundLineDto> { new() { OrderItemId = item.Id, Quantity = 1 } }
+        }, CancellationToken.None);
 
-        var orderItem = new OrderItem
-        {
-            SerialNumber = serialNumber,
-            Quantity = 5,
-            Status = OrderItemStatus.Successful,
-            RefundedQuantity = 0
-        };
-
-        _mockOrderItemRepository
-            .Setup(x => x.GetBySerialNumberAsync(serialNumber, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(orderItem);
-
-        // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
-
-        // Assert
         result.Success.Should().BeFalse();
-        result.ErrorMessage.Should().Contain("cannot exceed ordered quantity");
         result.StatusCode.Should().Be(400);
-    }
-
-    [Fact]
-    public async Task Handle_ZeroRefundQuantity_ShouldReturnFailure()
-    {
-        // Arrange
-        var serialNumber = "PF-001";
-        var command = new RefundOrderItemCommand
-        {
-            SerialNumber = serialNumber,
-            RefundQuantity = 0,
-            RefundToInventoryId = Guid.NewGuid()
-        };
-
-        // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
-
-        // Assert
-        result.Success.Should().BeFalse();
-        result.ErrorMessage.Should().Contain("must be greater than 0");
-        result.StatusCode.Should().Be(400);
-    }
-
-    [Fact]
-    public async Task Handle_DatabaseError_ShouldReturnFailure()
-    {
-        // Arrange
-        var serialNumber = "PF-001";
-        var command = new RefundOrderItemCommand
-        {
-            SerialNumber = serialNumber,
-            RefundQuantity = 1,
-            RefundToInventoryId = Guid.NewGuid()
-        };
-
-        _mockOrderItemRepository
-            .Setup(x => x.GetBySerialNumberAsync(serialNumber, It.IsAny<CancellationToken>()))
-            .ThrowsAsync(new Exception("Database connection failed"));
-
-        // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
-
-        // Assert
-        result.Success.Should().BeFalse();
-        result.ErrorMessage.Should().Contain("error occurred");
-        result.StatusCode.Should().Be(500);
-    }
-
-    [Fact]
-    public async Task Handle_InactiveInventory_ShouldReturnFailure()
-    {
-        // Arrange
-        var serialNumber = "PF-001";
-        var inventoryId = Guid.NewGuid();
-        var command = new RefundOrderItemCommand
-        {
-            SerialNumber = serialNumber,
-            RefundQuantity = 1,
-            RefundToInventoryId = inventoryId
-        };
-
-        var orderItem = new OrderItem
-        {
-            SerialNumber = serialNumber,
-            ItemId = Guid.NewGuid(),
-            Quantity = 5,
-            Status = OrderItemStatus.Successful,
-            RefundedQuantity = 0
-        };
-
-        var inventory = new Inventory
-        {
-            Id = inventoryId,
-            Name = "Inactive Warehouse",
-            IsActive = false
-        };
-
-        _mockOrderItemRepository
-            .Setup(x => x.GetBySerialNumberAsync(serialNumber, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(orderItem);
-
-        _mockInventoryRepository
-            .Setup(x => x.GetByIdAsync(inventoryId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(inventory);
-
-        // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
-
-        // Assert
-        result.Success.Should().BeFalse();
         result.ErrorMessage.Should().Contain("inactive");
-        result.StatusCode.Should().Be(400);
     }
 }

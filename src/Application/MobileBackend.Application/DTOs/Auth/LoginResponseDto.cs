@@ -35,6 +35,7 @@ public class UserInfoDto
     public string Username { get; set; } = string.Empty;
     public string Email { get; set; } = string.Empty;
     public string FullName { get; set; } = string.Empty;
+    public string? PhotoUrl { get; set; }
     public bool IsEnabled { get; set; }
     public bool IsApproved { get; set; }
     public List<Guid>? DefaultInventoryIds { get; set; }

@@ -36,12 +36,13 @@ public class UsersController : BaseApiController
     [HttpGet]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    public async Task<IActionResult> GetAll([FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
+    public async Task<IActionResult> GetAll([FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10, [FromQuery] string? keyword = null)
     {
         var query = new GetAllUsersQuery
         {
             PageNumber = pageNumber,
-            PageSize = pageSize
+            PageSize = pageSize,
+            Keyword = keyword
         };
 
         var result = await Mediator.Send(query);
@@ -289,5 +290,42 @@ public class UsersController : BaseApiController
         return result.Success
             ? OkResponse("User default locations updated successfully")
             : ErrorResponse(result);
+    }
+
+    /// <summary>
+    /// Upload or replace a user's profile photo (multipart/form-data, field "photo").
+    /// </summary>
+    [HttpPost("{id}/photo")]
+    [Consumes("multipart/form-data")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> SetPhoto(Guid id, [FromForm(Name = "photo")] IFormFile? photo)
+    {
+        if (photo == null || photo.Length == 0)
+            return BadRequest(new { success = false, message = "Photo file is required" });
+
+        await using var stream = photo.OpenReadStream();
+        var command = new MobileBackend.Application.Features.Users.Commands.SetUserPhoto.SetUserPhotoCommand
+        {
+            UserId = id,
+            FileStream = stream,
+            FileName = photo.FileName
+        };
+
+        var result = await Mediator.Send(command);
+        return result.Success ? OkResponse(new { photoUrl = result.Data }) : ErrorResponse(result);
+    }
+
+    /// <summary>
+    /// Remove a user's profile photo.
+    /// </summary>
+    [HttpDelete("{id}/photo")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> DeletePhoto(Guid id)
+    {
+        var result = await Mediator.Send(new MobileBackend.Application.Features.Users.Commands.DeleteUserPhoto.DeleteUserPhotoCommand { UserId = id });
+        return result.Success ? OkResponse("Photo removed") : ErrorResponse(result);
     }
 }

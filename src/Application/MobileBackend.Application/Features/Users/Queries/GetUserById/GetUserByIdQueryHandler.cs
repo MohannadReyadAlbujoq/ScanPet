@@ -37,6 +37,7 @@ public class GetUserByIdQueryHandler : BaseGetByIdHandler<GetUserByIdQuery, User
             Email = entity.Email,
             FullName = entity.FullName,
             PhoneNumber = entity.PhoneNumber,
+            PhotoUrl = entity.PhotoUrl,
             IsEnabled = entity.IsEnabled,
             IsApproved = entity.IsApproved,
             DefaultInventoryIds = entity.DefaultInventories.Select(di => di.InventoryId).ToList(),

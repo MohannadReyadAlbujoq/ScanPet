@@ -20,6 +20,15 @@ public class ItemInventoryDto
     public int? MaximumQuantity { get; set; }
     public string? Notes { get; set; }
     public bool IsLowStock { get; set; } // Calculated: Quantity <= MinimumQuantity
+
+    /// <summary>All discounts that target this item-at-this-inventory (Item / ItemInventory / ItemLocation).</summary>
+    public List<MobileBackend.Application.DTOs.Discounts.DiscountDto>? Discounts { get; set; }
+
+    /// <summary>Effective per-unit discount after stack/exclusive resolution. Null when none.</summary>
+    public decimal? EffectivePerUnitDiscount { get; set; }
+
+    /// <summary>Effective per-unit price = Item.BasePrice - EffectivePerUnitDiscount (clamped at 0).</summary>
+    public decimal? EffectiveUnitPrice { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime? UpdatedAt { get; set; }
 }

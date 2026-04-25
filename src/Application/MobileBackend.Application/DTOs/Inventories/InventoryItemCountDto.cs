@@ -27,6 +27,7 @@ public class GlobalItemTotalDto
     public Guid ItemId { get; set; }
     public string ItemName { get; set; } = string.Empty;
     public string? ItemSKU { get; set; }
+    public string? ItemImageUrl { get; set; }
 
     /// <summary>Combined quantity of this item across every inventory</summary>
     public int TotalQuantity { get; set; }
@@ -67,6 +68,7 @@ public class ItemCountEntryDto
     public Guid ItemId { get; set; }
     public string ItemName { get; set; } = string.Empty;
     public string? ItemSKU { get; set; }
+    public string? ItemImageUrl { get; set; }
     public int Quantity { get; set; }
     public int? MinimumQuantity { get; set; }
     public bool IsLowStock { get; set; }
