@@ -282,10 +282,10 @@ try
             await context.Database.MigrateAsync();
             dbLogger.LogInformation("? Database migrations applied successfully");
             
-            // Seed initial data
-            await MobileBackend.Infrastructure.Data.DbSeeder.SeedAsync(context, passwordService, dbLogger);
-            dbLogger.LogInformation("? Database seeded successfully");
-            dbLogger.LogInformation("? Admin credentials: admin / Admin@123");
+            // Seed initial data (commented out to prevent re-seeding on every startup)
+            // await MobileBackend.Infrastructure.Data.DbSeeder.SeedAsync(context, passwordService, dbLogger);
+            // dbLogger.LogInformation("? Database seeded successfully");
+            // dbLogger.LogInformation("? Admin credentials: admin / Admin@123");
         }
         catch (Exception ex)
         {
