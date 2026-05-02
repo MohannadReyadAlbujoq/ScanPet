@@ -43,8 +43,8 @@ public class GetAllColorsQueryHandlerTests : TestBase
         };
 
         _mockColorRepository
-            .Setup(x => x.GetAllAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(colors);
+            .Setup(x => x.GetAllWithItemCountsAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(colors.Select(c => (c, 0)));
 
         // Act
         var result = await _handler.Handle(query, CancellationToken.None);
@@ -64,8 +64,8 @@ public class GetAllColorsQueryHandlerTests : TestBase
         var query = new GetAllColorsQuery();
 
         _mockColorRepository
-            .Setup(x => x.GetAllAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<Color>());
+            .Setup(x => x.GetAllWithItemCountsAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Enumerable.Empty<(Color, int)>());
 
         // Act
         var result = await _handler.Handle(query, CancellationToken.None);
@@ -82,7 +82,7 @@ public class GetAllColorsQueryHandlerTests : TestBase
         var query = new GetAllColorsQuery();
 
         _mockColorRepository
-            .Setup(x => x.GetAllAsync(It.IsAny<CancellationToken>()))
+            .Setup(x => x.GetAllWithItemCountsAsync(It.IsAny<CancellationToken>()))
             .ThrowsAsync(new Exception("Database error"));
 
         // Act
@@ -90,7 +90,7 @@ public class GetAllColorsQueryHandlerTests : TestBase
 
         // Assert
         result.Success.Should().BeFalse();
-        result.ErrorMessage.Should().Contain("retrieving colors");
+        result.ErrorMessage.Should().Contain("retrieving Color");
     }
 
     [Fact]
@@ -109,8 +109,8 @@ public class GetAllColorsQueryHandlerTests : TestBase
         var activeColors = colors.Where(c => !c.IsDeleted).ToList();
 
         _mockColorRepository
-            .Setup(x => x.GetAllAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(activeColors);
+            .Setup(x => x.GetAllWithItemCountsAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(activeColors.Select(c => (c, 0)));
 
         // Act
         var result = await _handler.Handle(query, CancellationToken.None);
@@ -139,8 +139,8 @@ public class GetAllColorsQueryHandlerTests : TestBase
         };
 
         _mockColorRepository
-            .Setup(x => x.GetAllAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<Color> { color });
+            .Setup(x => x.GetAllWithItemCountsAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<(Color, int)> { (color, 0) });
 
         // Act
         var result = await _handler.Handle(query, CancellationToken.None);
@@ -175,8 +175,8 @@ public class GetAllColorsQueryHandlerTests : TestBase
             .ToList();
 
         _mockColorRepository
-            .Setup(x => x.GetAllAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(colors);
+            .Setup(x => x.GetAllWithItemCountsAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(colors.Select(c => (c, 0)));
 
         // Act
         var result = await _handler.Handle(query, CancellationToken.None);

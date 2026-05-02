@@ -6,6 +6,7 @@ using MobileBackend.Domain.Entities;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using System.Linq.Expressions;
 
 namespace MobileBackend.UnitTests.Features.Colors.Commands;
 
@@ -31,7 +32,10 @@ public class CreateColorCommandHandlerTests : TestBase
         _mockUnitOfWork.Setup(x => x.Colors).Returns(_mockColorRepository.Object);
         _mockCurrentUserService.Setup(x => x.UserId).Returns(Guid.NewGuid());
         _mockDateTimeService.Setup(x => x.UtcNow).Returns(DateTime.UtcNow);
-        
+        _mockColorRepository
+            .Setup(x => x.FindAsync(It.IsAny<System.Linq.Expressions.Expression<Func<Color, bool>>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<Color>());
+
         _handler = new CreateColorCommandHandler(
             _mockUnitOfWork.Object,
             _mockAuditService.Object,

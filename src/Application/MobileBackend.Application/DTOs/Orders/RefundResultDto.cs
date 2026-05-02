@@ -36,6 +36,8 @@ public class RefundedLineSummaryDto
     public Guid ItemId { get; set; }
     public string? ItemName { get; set; }
     public string? ItemImageUrl { get; set; }
+    /// <summary>True when the underlying item has been soft-deleted.</summary>
+    public bool IsItemDeleted { get; set; }
     public string? SerialNumber { get; set; }
     public int Quantity { get; set; }
     public int TotalRefundedQuantity { get; set; }

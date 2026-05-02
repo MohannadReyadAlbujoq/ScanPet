@@ -55,6 +55,7 @@ public class GetOrderByIdQueryHandler : BaseGetByIdHandler<GetOrderByIdQuery, Or
                 ItemId = oi.ItemId,
                 ItemName = oi.Item?.Name,
                 ItemImageUrl = oi.Item?.ImageUrl,
+                IsItemDeleted = oi.Item?.IsDeleted ?? false,
                 SerialNumber = oi.SerialNumber,
                 Quantity = oi.Quantity,
                 UnitPrice = oi.SalePrice,

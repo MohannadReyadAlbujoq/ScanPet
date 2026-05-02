@@ -65,7 +65,6 @@ public abstract class BaseCreateHandler<TCommand, TEntity> : IRequestHandler<TCo
 
             // 5. Add to repository
             await AddEntityAsync(entity, cancellationToken);
-            await UnitOfWork.SaveChangesAsync(cancellationToken);
 
             // 6. Audit log
             await AuditService.LogAsync(
@@ -76,6 +75,8 @@ public abstract class BaseCreateHandler<TCommand, TEntity> : IRequestHandler<TCo
                 additionalInfo: GetAuditMessage(entity),
                 cancellationToken: cancellationToken
             );
+
+            // 7. Save all changes in a single round-trip
             await UnitOfWork.SaveChangesAsync(cancellationToken);
 
             Logger.LogInformation("{EntityName} created successfully: {EntityId}", 

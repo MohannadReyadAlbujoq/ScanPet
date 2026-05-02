@@ -127,6 +127,7 @@ public class RefundOrderItemCommandHandler : IRequestHandler<RefundOrderItemComm
                     ItemId = orderItem.ItemId,
                     ItemName = orderItem.Item?.Name,
                     ItemImageUrl = orderItem.Item?.ImageUrl,
+                    IsItemDeleted = orderItem.Item?.IsDeleted ?? false,
                     SerialNumber = orderItem.SerialNumber,
                     Quantity = line.Quantity,
                     TotalRefundedQuantity = newRefunded,

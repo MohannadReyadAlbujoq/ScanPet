@@ -45,6 +45,7 @@ public class GetLowStockItemsQueryHandler : IRequestHandler<GetLowStockItemsQuer
                 MaximumQuantity = ii.MaximumQuantity,
                 Notes = ii.Notes,
                 IsLowStock = true, // All items in this list are low stock
+                IsItemDeleted = ii.Item?.IsDeleted ?? false,
                 CreatedAt = ii.CreatedAt,
                 UpdatedAt = ii.UpdatedAt
             }).ToList();

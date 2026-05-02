@@ -50,8 +50,8 @@ public class GetColorByIdQueryHandlerTests : TestBase
         };
 
         _mockColorRepository
-            .Setup(x => x.GetByIdAsync(colorId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(color);
+            .Setup(x => x.GetByIdWithItemCountAsync(colorId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((color, 0));
 
         // Act
         var result = await _handler.Handle(query, CancellationToken.None);
@@ -74,8 +74,8 @@ public class GetColorByIdQueryHandlerTests : TestBase
         var query = new GetColorByIdQuery { ColorId = colorId }; // Fix: Changed from Id to ColorId
 
         _mockColorRepository
-            .Setup(x => x.GetByIdAsync(colorId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync((Color?)null);
+            .Setup(x => x.GetByIdWithItemCountAsync(colorId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(((Color?)null, 0));
 
         // Act
         var result = await _handler.Handle(query, CancellationToken.None);
@@ -94,8 +94,8 @@ public class GetColorByIdQueryHandlerTests : TestBase
 
         // Repository should not return deleted colors
         _mockColorRepository
-            .Setup(x => x.GetByIdAsync(colorId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync((Color?)null);
+            .Setup(x => x.GetByIdWithItemCountAsync(colorId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(((Color?)null, 0));
 
         // Act
         var result = await _handler.Handle(query, CancellationToken.None);
@@ -113,7 +113,7 @@ public class GetColorByIdQueryHandlerTests : TestBase
         var query = new GetColorByIdQuery { ColorId = colorId };
 
         _mockColorRepository
-            .Setup(x => x.GetByIdAsync(colorId, It.IsAny<CancellationToken>()))
+            .Setup(x => x.GetByIdWithItemCountAsync(colorId, It.IsAny<CancellationToken>()))
             .ThrowsAsync(new Exception("Database error"));
 
         // Act
@@ -121,7 +121,7 @@ public class GetColorByIdQueryHandlerTests : TestBase
 
         // Assert
         result.Success.Should().BeFalse();
-        result.ErrorMessage.Should().Contain("retrieving the color"); // Fixed: added "the"
+        result.ErrorMessage.Should().Contain("retrieving Color"); // Matches BaseGetByIdHandler error message
     }
 
     [Fact]
@@ -146,8 +146,8 @@ public class GetColorByIdQueryHandlerTests : TestBase
         };
 
         _mockColorRepository
-            .Setup(x => x.GetByIdAsync(colorId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(color);
+            .Setup(x => x.GetByIdWithItemCountAsync(colorId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((color, 0));
 
         // Act
         var result = await _handler.Handle(query, CancellationToken.None);
@@ -188,8 +188,8 @@ public class GetColorByIdQueryHandlerTests : TestBase
         };
 
         _mockColorRepository
-            .Setup(x => x.GetByIdAsync(colorId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(color);
+            .Setup(x => x.GetByIdWithItemCountAsync(colorId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((color, 0));
 
         // Act
         var result = await _handler.Handle(query, CancellationToken.None);

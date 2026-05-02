@@ -130,7 +130,7 @@ public class CreateOrderCommandHandler : IRequestHandler<CreateOrderCommand, Res
                     ItemId = item.Id,
                     SerialNumber = serialNumber,
                     Quantity = quantity,
-                    SalePrice = salePrice,
+                    SalePrice = effectiveUnit,
                     Status = OrderItemStatus.Successful,
                     CreatedAt = DateTime.UtcNow,
                     UpdatedAt = DateTime.UtcNow

@@ -64,7 +64,6 @@ public abstract class BaseSoftDeleteHandler<TCommand, TEntity> : IRequestHandler
 
             // 5. Update entity
             UpdateEntity(entity);
-            await UnitOfWork.SaveChangesAsync(cancellationToken);
 
             // 6. Audit log
             await AuditService.LogAsync(
@@ -75,6 +74,8 @@ public abstract class BaseSoftDeleteHandler<TCommand, TEntity> : IRequestHandler
                 additionalInfo: GetAuditMessage(entity),
                 cancellationToken: cancellationToken
             );
+
+            // 7. Save all changes in a single round-trip
             await UnitOfWork.SaveChangesAsync(cancellationToken);
 
             Logger.LogInformation("{EntityName} deleted successfully: {EntityId}", 

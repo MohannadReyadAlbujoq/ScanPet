@@ -65,7 +65,10 @@ public class CancelOrderCommandHandler : IRequestHandler<CancelOrderCommand, Res
                     
                     if (targetInventory != null)
                     {
-                        targetInventory.Quantity += orderItem.Quantity;
+                        // Only restore the quantity that was not already refunded
+                        var quantityToRestore = orderItem.Quantity - orderItem.RefundedQuantity;
+                        if (quantityToRestore > 0)
+                            targetInventory.Quantity += quantityToRestore;
                         targetInventory.UpdatedAt = DateTime.UtcNow;
                         targetInventory.UpdatedBy = _currentUserService.UserId;
                         _unitOfWork.ItemInventories.Update(targetInventory);

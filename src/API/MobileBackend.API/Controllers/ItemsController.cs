@@ -167,6 +167,10 @@ public class ItemsController : BaseApiController
 
         if (image != null && image.Length > 0)
         {
+            // Delete the old image before saving the new one
+            if (!string.IsNullOrEmpty(imageUrl))
+                _fileService.DeleteFile(imageUrl);
+
             using var stream = image.OpenReadStream();
             finalImageUrl = await _fileService.SaveFileAsync(stream, image.FileName, "items");
         }

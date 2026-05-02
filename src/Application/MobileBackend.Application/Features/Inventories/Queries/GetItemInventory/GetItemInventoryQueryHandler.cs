@@ -52,6 +52,7 @@ public class GetItemInventoryQueryHandler : IRequestHandler<GetItemInventoryQuer
                 MaximumQuantity = ii.MaximumQuantity,
                 Notes = ii.Notes,
                 IsLowStock = ii.MinimumQuantity.HasValue && ii.Quantity <= ii.MinimumQuantity.Value,
+                IsItemDeleted = ii.Item?.IsDeleted ?? false,
                 CreatedAt = ii.CreatedAt,
                 UpdatedAt = ii.UpdatedAt
             }).ToList();

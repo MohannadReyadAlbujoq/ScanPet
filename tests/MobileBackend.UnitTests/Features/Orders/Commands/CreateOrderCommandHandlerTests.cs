@@ -19,6 +19,7 @@ public class CreateOrderCommandHandlerTests : TestBase
     private readonly Mock<IInventoryRepository> _mockInventoryRepository;
     private readonly Mock<IItemInventoryRepository> _mockItemInventoryRepository;
     private readonly Mock<IOrderItemRepository> _mockOrderItemRepository;
+    private readonly Mock<IDiscountRepository> _mockDiscountRepository;
     private readonly Mock<IAuditService> _mockAuditService;
     private readonly Mock<ICurrentUserService> _mockCurrentUserService;
     private readonly Mock<ILogger<CreateOrderCommandHandler>> _mockLogger;
@@ -32,6 +33,7 @@ public class CreateOrderCommandHandlerTests : TestBase
         _mockInventoryRepository = CreateMock<IInventoryRepository>();
         _mockItemInventoryRepository = CreateMock<IItemInventoryRepository>();
         _mockOrderItemRepository = CreateMock<IOrderItemRepository>();
+        _mockDiscountRepository = CreateMock<IDiscountRepository>();
         _mockAuditService = CreateMock<IAuditService>();
         _mockCurrentUserService = CreateMock<ICurrentUserService>();
         _mockLogger = CreateMock<ILogger<CreateOrderCommandHandler>>();
@@ -41,6 +43,12 @@ public class CreateOrderCommandHandlerTests : TestBase
         _mockUnitOfWork.Setup(x => x.Inventories).Returns(_mockInventoryRepository.Object);
         _mockUnitOfWork.Setup(x => x.ItemInventories).Returns(_mockItemInventoryRepository.Object);
         _mockUnitOfWork.Setup(x => x.OrderItems).Returns(_mockOrderItemRepository.Object);
+        _mockUnitOfWork.Setup(x => x.Discounts).Returns(_mockDiscountRepository.Object);
+
+        // Default: no discounts active
+        _mockDiscountRepository
+            .Setup(x => x.FindAsync(It.IsAny<Expression<Func<Discount, bool>>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<Discount>());
 
         _mockCurrentUserService.Setup(x => x.UserId).Returns(Guid.NewGuid());
 

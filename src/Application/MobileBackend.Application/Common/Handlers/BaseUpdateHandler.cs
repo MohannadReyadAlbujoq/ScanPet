@@ -79,12 +79,13 @@ public abstract class BaseUpdateHandler<TCommand, TEntity> : IRequestHandler<TCo
             // 8. Capture new values for audit
             var newValues = CaptureNewValues(entity);
 
-            // 9. Save changes
+            // 9. Update entity
             UpdateEntity(entity);
-            await UnitOfWork.SaveChangesAsync(cancellationToken);
 
             // 10. Audit log with old/new values
             await LogAuditAsync(entity, oldValues, newValues, cancellationToken);
+
+            // 11. Save all changes in a single round-trip
             await UnitOfWork.SaveChangesAsync(cancellationToken);
 
             Logger.LogInformation("{EntityName} updated successfully: {EntityId}", 

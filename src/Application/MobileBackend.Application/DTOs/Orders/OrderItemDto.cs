@@ -90,4 +90,9 @@ public class OrderItemDto
     /// Serial number for the order item — uses the Item SKU
     /// </summary>
     public string? SerialNumber { get; set; }
+
+    /// <summary>
+    /// True when the underlying item has been soft-deleted (image and image URL will be null).
+    /// </summary>
+    public bool IsItemDeleted { get; set; }
 }

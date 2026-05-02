@@ -21,6 +21,9 @@ public class ItemInventoryDto
     public string? Notes { get; set; }
     public bool IsLowStock { get; set; } // Calculated: Quantity <= MinimumQuantity
 
+    /// <summary>True when the underlying item has been soft-deleted (image and image URL will be null).</summary>
+    public bool IsItemDeleted { get; set; }
+
     /// <summary>All discounts that target this item-at-this-inventory (Item / ItemInventory / ItemLocation).</summary>
     public List<MobileBackend.Application.DTOs.Discounts.DiscountDto>? Discounts { get; set; }
 
